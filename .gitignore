@@ -1,15 +1,4 @@
 ```
-# Dependencies
-node_modules/
-.pnpm-store/
-.npm/
-
-# Build outputs
-dist/
-build/
-target/
-out/
-
 # Python
 __pycache__/
 *.pyc
@@ -19,33 +8,43 @@ __pycache__/
 env/
 venv/
 .venv/
+.ENV
+.python-version
+
+# Logs
+*.log
+
+# Environment
 .env
 .env.local
 .env.*
 
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Dependencies
+node_modules/
+julia-*/
+zig*/
+target/
+.gradle/
 
-# Editor
+# Coverage reports
+coverage/
+htmlcov/
+.coverage
+
+# Editor/IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
+*.tmp
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Coverage
-coverage/
-htmlcov/
-.coverage
-
-# Temporary files
-*.tmp
-*.temp
+# Build artifacts
+dist/
+build/
+.mypy_cache/
+.pytest_cache/
 ```
