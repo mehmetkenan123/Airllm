@@ -1,11 +1,11 @@
 # 🚀 AirLLM Studio - Yerel LLM Uygulaması
 
-Düşük donanımlı bilgisayarlarda bile büyük dil modellerini (LLM) çalıştırabileceğiniz, AirLLM benzeri katman katman yükleme sistemi ile geliştirilmiş yerel AI stüdyosu.
+Düşük donanımlı bilgisayarlarda bile büyük dil modellerini (LLM) çalıştırabileceğiniz, **resmi AirLLM kütüphanesi** entegrasyonu ile geliştirilmiş yerel AI stüdyosu.
 
 ## ✨ Özellikler
 
 ### 🧠 Otomatik Model Yönetimi
-- **HuggingFace Entegrasyonu**: 7 popüler model arasından seçim yapın
+- **HuggingFace Entegrasyonu**: 100+ popüler model arasından seçim yapın
   - Qwen2.5 7B Instruct (Önerilen)
   - Llama 3.2 3B Instruct (Düşük RAM için ideal)
   - Phi-3 Mini 3.8B
@@ -13,9 +13,13 @@ Düşük donanımlı bilgisayarlarda bile büyük dil modellerini (LLM) çalış
   - Mistral 7B Instruct
   - Qwen2.5 14B Instruct
   - Llama 3.1 8B Instruct
+  - Ve 90+ daha fazla model (70B dahil!)
 
 - **Tek Tıkla İndirme**: Modeller otomatik olarak HuggingFace'den indirilir
-- **Katman Katman Yükleme**: Düşük RAM kullanımı için optimize edilmiş
+- **AirLLM Katman Katman Yükleme**: Resmi AirLLM kütüphanesi ile düşük RAM kullanımı
+  - 4GB GPU'da 70B modeller çalıştırabilir
+  - Quantization, distillation veya pruning olmadan
+  - Otomatik katman yönetimi
 - **İlerleme Takibi**: İndirme ve yükleme durumunu gerçek zamanlı izleyin
 - **Model Boşaltma**: Bellekten kolayca temizleyin
 
@@ -122,12 +126,31 @@ http://localhost:8080
 
 ## 🔧 Teknik Detaylar
 
+### AirLLM Entegrasyonu
+
+Bu proje, resmi **AirLLM** kütüphanesini kullanır:
+- **airllm>=2.0.0** requirements.txt'e eklendi
+- 4GB GPU VRAM ile 70B parametreli modeller çalıştırılabilir
+- Katman katman yükleme ile bellek kullanımı optimize edilir
+- Quantization, distillation veya pruning gerektirmez
+
+**Kullanım:**
+```python
+from airllm import AutoModel as AirLLMAutoModel
+
+model = AirLLMAutoModel.from_pretrained(
+    "Qwen/Qwen2.5-72B-Instruct",
+    device_map='auto',
+    compression='none'
+)
+```
+
 ### Katman Katman Yükleme Sistemi
 
-AirLLM'den esinlenen bu sistem:
-- Model ağırlıklarını gerektiğinde yükler
+AirLLM kütüphanesi entegre edilmiştir:
+- Model ağırlıklarını otomatik olarak katman katman yükler
 - CPU ve RAM kullanımını optimize eder
-- Düşük donanımlarda büyük modeller çalıştırmanızı sağlar
+- Düşük donanımlarda büyük modeller (70B+) çalıştırmanızı sağlar
 
 ### Desteklenen Dosya Formatları
 
