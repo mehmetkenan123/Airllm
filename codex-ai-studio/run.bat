@@ -1,9 +1,9 @@
 @echo off
 chcp 65001 >nul
-title AirLLM Studio v2.0 - Professional Edition
+title Codex AI Studio v3.0 - Professional Edition
 
 echo ========================================
-echo   AirLLM Studio v2.0
+echo   Codex AI Studio v3.0
 echo   Professional Edition
 echo ========================================
 echo.
@@ -33,7 +33,7 @@ if %errorlevel% neq 0 (
 )
 echo.
 
-echo [3/3] Starting AirLLM Studio v2.0...
+echo [3/3] Starting Codex AI Studio v3.0...
 echo Browser will open automatically...
 echo.
 echo ========================================
