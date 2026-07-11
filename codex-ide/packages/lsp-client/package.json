@@ -1,0 +1,30 @@
+{
+  "name": "@codex-ide/lsp-client",
+  "version": "1.0.0",
+  "description": "Codex IDE - Language Server Protocol client",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@codex-ide/core": "workspace:*",
+    "vscode-languageserver-protocol": "^3.17.5",
+    "vscode-languageserver-node": "^3.17.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.12",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.4"
+  }
+}

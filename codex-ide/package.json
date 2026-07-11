@@ -1,0 +1,35 @@
+{
+  "name": "codex-ide",
+  "version": "1.0.0",
+  "description": "A fully open-source, offline-capable IDE powered by local LLMs",
+  "license": "MIT",
+  "private": true,
+  "packageManager": "pnpm@9.5.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev --filter=codex-desktop",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "typecheck": "turbo run typecheck",
+    "electron:dev": "pnpm --filter codex-desktop dev",
+    "electron:build": "pnpm --filter codex-desktop build",
+    "web:dev": "pnpm --filter codex-web dev",
+    "cli": "pnpm --filter codex-cli start",
+    "prepare": "lefthook install"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.8.3",
+    "lefthook": "^1.6.18",
+    "turbo": "^2.0.11",
+    "typescript": "^5.5.4"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}
