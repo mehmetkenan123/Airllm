@@ -427,20 +427,30 @@
         }
 
         // Dosya ağacını yükle
-        async function loadFileTree(path = '.') {
+        async function loadFileTree(path = '/workspace/airllm-studio') {
             try {
                 const response = await fetch(`${API_BASE}/files/list`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({path: path === '.' ? process.cwd() : path})
+                    body: JSON.stringify({path: path})
                 });
                 
-                // Not: process.cwd() JS'de çalışmaz, backend'den gelecek
-                // Bu sadece frontend demosu
                 const items = await response.json();
                 
                 const container = document.getElementById('files-content');
                 container.innerHTML = '';
+                
+                // Geri butonu (kök dizin değilse)
+                if (path !== '/workspace/airllm-studio') {
+                    const backDiv = document.createElement('div');
+                    backDiv.className = 'file-tree-item';
+                    backDiv.innerHTML = `<span class="folder-icon">📁</span> ..`;
+                    backDiv.onclick = () => {
+                        const parentPath = path.substring(0, path.lastIndexOf('/'));
+                        loadFileTree(parentPath || '/workspace/airllm-studio');
+                    };
+                    container.appendChild(backDiv);
+                }
                 
                 items.forEach(item => {
                     const div = document.createElement('div');
@@ -462,20 +472,34 @@
                 });
             } catch (error) {
                 console.error('Dosya yükleme hatası:', error);
+                appendTerminal(`Hata: ${error.message}`, 'red');
             }
         }
 
         // Dosya aç
-        function openFile(file) {
+        async function openFile(file) {
             if (!openFiles.find(f => f.path === file.path)) {
                 openFiles.push(file);
                 renderTabs();
             }
             selectTab(file.path);
             
-            // Dosya içeriğini yükle (simülasyon)
-            document.getElementById('code-editor').value = `// ${file.name} dosyası açıldı\n// İçerik yükleniyor...`;
-            currentFile = file;
+            // Dosya içeriğini yükle
+            try {
+                const response = await fetch(`${API_BASE}/files/read`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({path: file.path})
+                });
+                
+                const data = await response.json();
+                document.getElementById('code-editor').value = data.content || '';
+                currentFile = file;
+                appendTerminal(`📄 ${file.name} açıldı`);
+            } catch (error) {
+                console.error('Dosya okuma hatası:', error);
+                document.getElementById('code-editor').value = `// Hata: ${error.message}`;
+            }
         }
 
         // Sekmeleri render et
@@ -496,8 +520,46 @@
         function selectTab(filePath) {
             currentFile = openFiles.find(f => f.path === filePath);
             renderTabs();
-            // Gerçek uygulamada dosya içeriği burada yüklenir
+            // Dosya içeriği zaten açık
         }
+
+        // Dosya kaydet (Ctrl+S)
+        async function saveCurrentFile() {
+            if (!currentFile) {
+                appendTerminal('⚠️ Kaydedilecek dosya açık değil', 'orange');
+                return;
+            }
+            
+            const content = document.getElementById('code-editor').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/files/save`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        path: currentFile.path,
+                        content: content
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.message) {
+                    appendTerminal(`✅ ${currentFile.name} kaydedildi (${result.size} bytes)`);
+                } else {
+                    appendTerminal(`❌ Hata: ${result.error}`, 'red');
+                }
+            } catch (error) {
+                appendTerminal(`❌ Kaydetme hatası: ${error.message}`, 'red');
+            }
+        }
+
+        // Keyboard shortcut (Ctrl+S)
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                saveCurrentFile();
+            }
+        });
 
         // Modelleri tara
         async function scanModels() {
@@ -640,8 +702,26 @@
             output.scrollTop = output.scrollHeight;
         }
 
-        // process.cwd() shim for demo
-        const process = { cwd: () => '.' };
+        // Sistem durumunu gerçek API'den çek
+        async function fetchSystemInfo() {
+            try {
+                const response = await fetch(`${API_BASE}/system/info`);
+                const info = await response.json();
+                
+                if (info.ram_percent) {
+                    document.getElementById('ram-status').innerText = `RAM: ${info.ram_percent}%`;
+                }
+                
+                if (info.model_loaded) {
+                    document.getElementById('model-status').innerText = `Model: ${info.model_loaded}`;
+                }
+            } catch (error) {
+                // Sessizce başarısız ol
+            }
+        }
+
+        // Her 5 saniyede bir sistem bilgilerini güncelle
+        setInterval(fetchSystemInfo, 5000);
     </script>
 </body>
 </html>

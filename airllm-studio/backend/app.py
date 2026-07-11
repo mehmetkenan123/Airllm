@@ -854,6 +854,278 @@ def system_info():
     })
 
 
+@app.route('/api/files/list', methods=['POST'])
+def list_files():
+    """Dizin içeriğini listele"""
+    data = request.json or {}
+    path = data.get('path', '/workspace/airllm-studio')
+    
+    # Güvenlik: Sadece workspace içinde gezinmeye izin ver
+    base_path = os.path.abspath('/workspace/airllm-studio')
+    target_path = os.path.abspath(path)
+    
+    if not target_path.startswith(base_path):
+        return jsonify({'error': 'İzin verilen dizin dışında'}), 403
+    
+    if not os.path.exists(target_path):
+        return jsonify({'error': 'Dizin bulunamadı'}), 404
+    
+    try:
+        items = []
+        for item in os.listdir(target_path):
+            item_path = os.path.join(target_path, item)
+            is_dir = os.path.isdir(item_path)
+            
+            # Gizli dosyaları ve bazı dizinleri atla
+            if item.startswith('.') and item not in ['.git']:
+                continue
+                
+            items.append({
+                'name': item,
+                'path': item_path,
+                'is_dir': is_dir,
+                'size': os.path.getsize(item_path) if not is_dir else 0
+            })
+        
+        # Önce dizinler, sonra dosyalar (alfabetik)
+        items.sort(key=lambda x: (not x['is_dir'], x['name'].lower()))
+        
+        return jsonify(items)
+    except PermissionError:
+        return jsonify({'error': 'İzin hatası'}), 403
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/files/read', methods=['POST'])
+def read_file():
+    """Dosya içeriğini oku"""
+    data = request.json or {}
+    file_path = data.get('path')
+    
+    if not file_path:
+        return jsonify({'error': 'Dosya yolu gerekli'}), 400
+    
+    # Güvenlik kontrolü
+    base_path = os.path.abspath('/workspace/airllm-studio')
+    target_path = os.path.abspath(file_path)
+    
+    if not target_path.startswith(base_path):
+        return jsonify({'error': 'İzin verilen dizin dışında'}), 403
+    
+    if not os.path.isfile(target_path):
+        return jsonify({'error': 'Dosya bulunamadı'}), 404
+    
+    try:
+        # Binary dosyaları kontrol et
+        binary_extensions = ['.pyc', '.pyo', '.so', '.dll', '.exe', '.bin']
+        if any(file_path.endswith(ext) for ext in binary_extensions):
+            return jsonify({'error': 'Binary dosyalar okunamaz'}), 400
+        
+        with open(target_path, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+        
+        return jsonify({
+            'path': file_path,
+            'content': content,
+            'size': os.path.getsize(target_path)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/files/save', methods=['POST'])
+def save_file():
+    """Dosyayı kaydet"""
+    data = request.json or {}
+    file_path = data.get('path')
+    content = data.get('content', '')
+    
+    if not file_path:
+        return jsonify({'error': 'Dosya yolu gerekli'}), 400
+    
+    # Güvenlik kontrolü
+    base_path = os.path.abspath('/workspace/airllm-studio')
+    target_path = os.path.abspath(file_path)
+    
+    if not target_path.startswith(base_path):
+        return jsonify({'error': 'İzin verilen dizin dışında'}), 403
+    
+    try:
+        # Dizin yoksa oluştur
+        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+        
+        with open(target_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        return jsonify({
+            'message': 'Dosya başarıyla kaydedildi',
+            'path': file_path,
+            'size': len(content)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/models/scan', methods=['GET'])
+def scan_models_api():
+    """Modelleri tara - hem yerel hem preset"""
+    local_models = scan_local_models()
+    preset_models = AVAILABLE_MODELS
+    
+    return jsonify({
+        'local': local_models,
+        'preset': preset_models,
+        'total_found': len(local_models),
+        'total_preset': len(preset_models)
+    })
+
+
+@app.route('/api/models/load', methods=['POST'])
+def load_model_api():
+    """Model yükle - frontend uyumlu"""
+    global model_instance, current_model, model_loading, download_progress
+    
+    data = request.json or {}
+    model_id = data.get('id')
+    model_path = data.get('path')
+    
+    # Model path veya id gerekli
+    if not model_path and not model_id:
+        return jsonify({'error': 'Model ID veya path gerekli'}), 400
+    
+    # ID'den path bul
+    if not model_path and model_id:
+        for model in AVAILABLE_MODELS:
+            if model['id'] == model_id:
+                model_path = model['path']
+                break
+    
+    if not model_path:
+        return jsonify({'error': 'Model bulunamadı'}), 404
+    
+    # Zaten yükleniyorsa
+    if model_loading:
+        return jsonify({'status': 'loading', 'message': 'Başka bir model zaten yükleniyor'})
+    
+    # Aynı model zaten yüklüyse
+    if current_model == model_path and model_instance is not None:
+        return jsonify({
+            'status': 'already_loaded',
+            'model': current_model
+        })
+    
+    model_loading = True
+    progress_id = str(uuid.uuid4())
+    download_progress[progress_id] = {
+        'status': 'starting',
+        'progress': 0,
+        'message': 'Model yükleme başlatılıyor...'
+    }
+    
+    def load_in_background():
+        global model_instance, current_model, model_loading, download_progress
+        
+        try:
+            download_progress[progress_id] = {
+                'status': 'downloading',
+                'progress': 10,
+                'message': f'{model_path} indiriliyor/yükleniyor...'
+            }
+            
+            # Eski modeli temizle
+            if model_instance:
+                model_instance.unload_model()
+            
+            # Yeni model instance oluştur
+            model_instance = LayeredLLM(model_path)
+            
+            download_progress[progress_id] = {
+                'status': 'loading',
+                'progress': 30,
+                'message': 'Tokenizer yükleniyor...'
+            }
+            
+            # Tokenizer yükle
+            model_instance.load_tokenizer()
+            
+            download_progress[progress_id] = {
+                'status': 'loading',
+                'progress': 50,
+                'message': 'Model katmanları yükleniyor...'
+            }
+            
+            # Modeli yükle
+            model_instance.load_model_layered()
+            
+            download_progress[progress_id] = {
+                'status': 'ready',
+                'progress': 100,
+                'message': 'Model hazır!'
+            }
+            
+            current_model = model_path
+            
+        except Exception as e:
+            download_progress[progress_id] = {
+                'status': 'error',
+                'progress': 0,
+                'message': f'Hata: {str(e)}'
+            }
+        finally:
+            model_loading = False
+    
+    # Background thread'de yükle
+    thread = threading.Thread(target=load_in_background)
+    thread.start()
+    
+    return jsonify({
+        'status': 'loading',
+        'message': 'Model yükleme başlatıldı',
+        'progress_id': progress_id,
+        'model': model_path
+    })
+
+
+@app.route('/api/terminal/run', methods=['POST'])
+def run_terminal_command():
+    """Terminal komutu çalıştır"""
+    data = request.json or {}
+    command = data.get('command', '')
+    
+    if not command:
+        return jsonify({'error': 'Komut gerekli'}), 400
+    
+    # Güvenlik: Tehlikeli komutları engelle
+    dangerous_commands = ['rm -rf', 'sudo', 'su ', 'chmod 777', 'dd if=', '> /dev/', '| sh']
+    for dangerous in dangerous_commands:
+        if dangerous in command.lower():
+            return jsonify({'error': 'Bu komut güvenlik nedeniyle engellendi'}), 403
+    
+    try:
+        import subprocess
+        
+        # Workspace dizininde çalıştır
+        result = subprocess.run(
+            command,
+            shell=True,
+            cwd='/workspace/airllm-studio',
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        return jsonify({
+            'stdout': result.stdout,
+            'stderr': result.stderr,
+            'returncode': result.returncode
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'Komut zaman aşımına uğradı (30s)'}), 408
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 
 def find_free_port(start_port=5000):
     """Kullanılmayan bir port bul"""
