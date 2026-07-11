@@ -1,3 +1,50 @@
-The deleted file 'airllm-studio/backend/=2.0.0' appears to be a version-related path that might indicate a dependency or build artifact, but without more context in the added/modified files showing clear build artifacts, dependencies, or temporary files that follow common patterns, there are no definitive items to add to the .gitignore based on the provided changes.
+```
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.ENV
+.python-version
+.pytest_cache/
+.mypy_cache/
 
-(empty)
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+```
