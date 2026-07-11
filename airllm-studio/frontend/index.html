@@ -589,11 +589,24 @@
         function addModelItem(model, container) {
             const div = document.createElement('div');
             div.className = 'model-item';
+            
+            // Model tipi için badge belirle
+            let typeBadge = 'HUGGINGFACE';
+            let badgeClass = model.type || 'preset';
+            
+            if (model.is_local_file || model.category === 'local' || model.type === 'gguf' || model.type === 'pytorch' || model.type === 'onnx' || model.type === 'tensorflow') {
+                typeBadge = 'YEREL';
+                badgeClass = 'local';
+            }
+            
+            // Uzantı bilgisi varsa göster
+            let extInfo = model.extension ? ` • ${model.extension.toUpperCase()}` : '';
+            
             div.innerHTML = `
-                <div class="model-name">${model.name}</div>
+                <div class="model-name">${model.name}${extInfo}</div>
                 <div class="model-info">
                     <span>${model.size || '--'}</span>
-                    <span class="badge ${model.type}">${model.type === 'local_scan' ? 'YEREL' : 'HUGGINGFACE'}</span>
+                    <span class="badge ${badgeClass}">${typeBadge}</span>
                 </div>
             `;
             div.onclick = () => loadModel(model);

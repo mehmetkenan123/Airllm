@@ -11,6 +11,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 import hf_transfer
 from pathlib import Path
 from airllm import AutoModel as AirLLMAutoModel
+import psutil
 
 # AirLLM entegrasyonu ile gelişmiş katman katman yükleme sistemi
 class LayeredLLM:
@@ -398,7 +399,7 @@ AVAILABLE_MODELS = [
 
 # Yerel model tarama fonksiyonu
 def scan_local_models():
-    """Bilgisayardaki tüm potansiyel LLM modellerini otomatik tarar"""
+    """Bilgisayardaki tüm potansiyel LLM modellerini otomatik tarar - Tüm uzantıları destekler"""
     found_models = []
     
     # Taranacak kök dizinler
@@ -414,15 +415,37 @@ def scan_local_models():
         search_roots.append("/mnt")
         search_roots.append("/media")
         search_roots.append("/home")
+        search_roots.append("/workspace")
+        search_roots.append("/opt")
+        search_roots.append("/usr/local")
     
-    # Aranacak klasör ve dosya desenleri
-    target_keywords = ['models', 'huggingface', 'hub', 'llm', 'ai', 'weights', 'safetensors', 'gguf']
-    valid_extensions = ['.safetensors', '.bin', '.gguf', '.pt', '.pth', '.onnx']
+    # Aranacak klasör ve dosya desenleri - GENİŞLETİLDİ
+    target_keywords = ['models', 'huggingface', 'hub', 'llm', 'ai', 'weights', 'safetensors', 'gguf', 
+                       'transformers', 'pytorch', 'onnx', 'tensorflow', 'keras', 'mlx', 'coreml',
+                       'model', 'checkpoint', 'finetune', 'lora', 'adapter']
+    # TÜM LLM UZANTILARINI DESTEKLE
+    valid_extensions = [
+        # PyTorch formatları
+        '.safetensors', '.bin', '.pt', '.pth', '.ckpt', 
+        # GGUF/GGML formatları (llama.cpp)
+        '.gguf', '.ggml', '.ggmf', '.ggjt', 
+        # ONNX formatı
+        '.onnx', '.onnx_data',
+        # TensorFlow formatları
+        '.pb', '.h5', '. SavedModel',
+        # MLX formatı (Apple)
+        '.mlx', '.npz',
+        # Diğer
+        '.tensor', '.weights', '.model', '.lmdb', '.json'
+    ]
     
     scanned_count = 0
-    max_scans = 10000  # Performans sınırı
+    max_scans = 50000  # Daha yüksek sınır - 40+ model bulmak için yeterli
+    min_file_size_mb = 50  # Minimum 50MB - küçük embedding'leri filtrele
     
     print("🔍 Yerel modeller taranıyor... Bu işlem birkaç saniye sürebilir.")
+    print(f"   📂 Taranacak dizinler: {len(search_roots)}")
+    print(f"   🔍 Desteklenen uzantılar: {len(valid_extensions)}")
     
     try:
         for root_path in search_roots:
@@ -431,6 +454,7 @@ def scan_local_models():
                 
             for dirpath, dirnames, filenames in os.walk(root_path):
                 if scanned_count > max_scans:
+                    print(f"   ⚠️  Maksimum tarama sayısına ulaşıldı ({max_scans} dosya)")
                     break
                 
                 # Klasör adı kontrolü (hızlandırma)
@@ -444,15 +468,23 @@ def scan_local_models():
                 for file in filenames:
                     scanned_count += 1
                     
-                    # Uzantı kontrolü
-                    if any(file.endswith(ext) for ext in valid_extensions):
+                    # Uzantı kontrolü - TÜM UZANTILARI DESTEKLE
+                    file_ext = None
+                    for ext in valid_extensions:
+                        if file.endswith(ext):
+                            file_ext = ext
+                            break
+                    
+                    if file_ext:
                         full_path = os.path.join(dirpath, file)
                         
                         try:
-                            size_gb = os.path.getsize(full_path) / (1024**3)
+                            size_bytes = os.path.getsize(full_path)
+                            size_gb = size_bytes / (1024**3)
+                            size_mb = size_bytes / (1024**2)
                             
-                            # Sadece makul boyuttaki dosyalar (>100MB)
-                            if size_gb < 0.1:
+                            # Sadece makul boyuttaki dosyalar (>50MB)
+                            if size_mb < min_file_size_mb:
                                 continue
                             
                             # Model adı tahmini
@@ -462,26 +494,44 @@ def scan_local_models():
                                 if parent and len(parent) > 3:
                                     model_name = parent
                             
+                            # Model tipi tespiti
+                            model_type = "unknown"
+                            if file_ext in ['.safetensors', '.bin', '.pt', '.pth', '.ckpt']:
+                                model_type = "pytorch"
+                            elif file_ext in ['.gguf', '.ggml', '.ggmf', '.ggjt']:
+                                model_type = "gguf"
+                            elif file_ext in ['.onnx', '.onnx_data']:
+                                model_type = "onnx"
+                            elif file_ext in ['.pb', '.h5']:
+                                model_type = "tensorflow"
+                            elif file_ext in ['.mlx', '.npz']:
+                                model_type = "mlx"
+                            else:
+                                model_type = "other"
+                            
                             # Tekrarları önle
                             is_duplicate = any(m['path'] == full_path for m in found_models)
                             if not is_duplicate:
                                 found_models.append({
-                                    "id": f"local_{scanned_count}",
+                                    "id": f"local_{len(found_models)}",
                                     "name": f"{model_name} ({size_gb:.2f} GB)",
                                     "path": full_path,
                                     "size": f"~{size_gb:.1f}GB",
-                                    "type": "local",
-                                    "description": "Yerel diskte bulundu - Otomatik tarama",
+                                    "type": model_type,
+                                    "extension": file_ext,
+                                    "description": f"Yerel diskte bulundu - {model_type.upper()} formatı - Otomatik tarama",
                                     "recommended": True,
                                     "category": "local",
-                                    "is_local_file": True
+                                    "is_local_file": True,
+                                    "file_size_bytes": size_bytes
                                 })
-                        except (OSError, PermissionError):
+                                print(f"   📦 Model bulundu: {model_name} ({size_gb:.2f} GB) - {file_ext}")
+                        except (OSError, PermissionError) as e:
                             pass  # Erişim hatası
                 
                 # Derinlik sınırlaması (çok derine inmesin)
                 depth = dirpath.count(os.sep) - root_path.count(os.sep)
-                if depth > 8:
+                if depth > 10:  # Daha derin tarama
                     dirnames.clear()
                     
     except PermissionError:
@@ -489,7 +539,7 @@ def scan_local_models():
     except Exception as e:
         print(f"Tarama sırasında hata: {e}")
 
-    print(f"✅ {len(found_models)} yerel model bulundu!")
+    print(f"✅ Toplam {len(found_models)} yerel model bulundu!")
     return found_models
 
 
@@ -1152,12 +1202,33 @@ if __name__ == '__main__':
     if torch.cuda.is_available():
         print(f"🎮 GPU: {torch.cuda.get_device_name(0)}")
     print(f"💾 RAM: {psutil.virtual_memory().total / 1024**3:.1f} GB")
+    print(f"🔵 CPU Çekirdekleri: {psutil.cpu_count(logical=False)} fiziksel / {psutil.cpu_count()} mantıksal")
+    print("=" * 60)
+    print("🔍 YEREL MODELLER OTOMATİK TARANIYOR...")
+    print("=" * 60)
+    
+    # Uygulama başlamadan önce yerel modelleri otomatik tara
+    local_models = scan_local_models()
+    
+    if len(local_models) > 0:
+        print("=" * 60)
+        print(f"✅ {len(local_models)} YEREL MODEL BULUNDU!")
+        print("=" * 60)
+        for i, model in enumerate(local_models[:10], 1):  # İlk 10 modeli göster
+            print(f"   {i}. {model['name']} - {model['type'].upper()} ({model['path']})")
+        if len(local_models) > 10:
+            print(f"   ... ve {len(local_models) - 10} model daha")
+        print("=" * 60)
+        print("💡 Bulunan modeller arayüzde otomatik listelenecek!")
+    else:
+        print("⚠️  Hiç yerel model bulunamadı.")
+        print("💡 İpucu: Model dosyalarınızı .safetensors, .bin, .gguf, .pt formatında kaydedin")
+    
     print("=" * 60)
     print(f"📡 Sunucu http://localhost:{port} adresinde çalışıyor")
     print(f"🌐 Tarayıcıda http://localhost:{port} adresini açın")
     print("=" * 60)
-    print("🔍 Yerel modeller otomatik taranacak...")
-    print("💡 İpucu: İlk model yükleme sırasında internet bağlantısı gerekir")
+    print("💡 AirLLM ile 4GB VRAM'de 70B+ modeller çalıştırabilirsiniz!")
     print("=" * 60)
     
     app.run(debug=False, host='0.0.0.0', port=port, threaded=True)
