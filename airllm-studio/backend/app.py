@@ -4,10 +4,12 @@ import os
 import uuid
 import json
 import threading
+import socket
 from queue import Queue
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 import hf_transfer
+from pathlib import Path
 
 # AirLLM benzeri katman katman yükleme sistemi
 class LayeredLLM:
@@ -156,15 +158,149 @@ class LayeredLLM:
         print("Model bellekten temizlendi")
 
 
-# Popüler HuggingFace modelleri
+# Popüler HuggingFace modelleri - 100+ model desteği
 AVAILABLE_MODELS = [
+    # === ULTRA BÜYÜK MODELLER (70B+) - AirLLM ile düşük RAM'de çalışır ===
+    {
+        "id": "qwen2.5-72b",
+        "name": "Qwen2.5 72B Instruct",
+        "path": "Qwen/Qwen2.5-72B-Instruct",
+        "size": "~140GB",
+        "description": "En güçlü açık kaynak model, AirLLM ile 16GB RAM'de çalışır",
+        "recommended": False,
+        "category": "huge"
+    },
+    {
+        "id": "llama3.1-70b",
+        "name": "Llama 3.1 70B Instruct",
+        "path": "meta-llama/Meta-Llama-3.1-70B-Instruct",
+        "size": "~140GB",
+        "description": "Meta'nın amiral gemisi, mükemmel akıl yürütme",
+        "recommended": False,
+        "category": "huge"
+    },
+    {
+        "id": "mixtral-8x22b",
+        "name": "Mixtral 8x22B MoE",
+        "path": "mistralai/Mixtral-8x22B-Instruct-v0.1",
+        "size": "~140GB",
+        "description": "Mixture of Experts, hızlı ve güçlü",
+        "recommended": False,
+        "category": "huge"
+    },
+    {
+        "id": "falcon-180b",
+        "name": "Falcon 180B",
+        "path": "tiiuae/falcon-180B",
+        "size": "~350GB",
+        "description": "En büyük açık model, AirLLM ile mümkün",
+        "recommended": False,
+        "category": "huge"
+    },
+    {
+        "id": "grok1",
+        "name": "Grok-1 (xAI)",
+        "path": "xAI/Grok-1",
+        "size": "~600GB",
+        "description": "Elon Musk'ın şirketi xAI'nin 314B parametreli modeli",
+        "recommended": False,
+        "category": "huge"
+    },
+    
+    # === BÜYÜK MODELLER (30B-70B) ===
+    {
+        "id": "codellama-34b",
+        "name": "CodeLlama 34B",
+        "path": "codellama/CodeLlama-34b-Instruct-hf",
+        "size": "~65GB",
+        "description": "Kod yazma için optimize edilmiş",
+        "recommended": False,
+        "category": "large"
+    },
+    {
+        "id": "yi-34b",
+        "name": "Yi-34B Chat",
+        "path": "01-ai/Yi-34B-Chat",
+        "size": "~65GB",
+        "description": "01.AI'nin güçlü modeli",
+        "recommended": False,
+        "category": "large"
+    },
+    {
+        "id": "gemma2-27b",
+        "name": "Gemma 2 27B",
+        "path": "google/gemma-2-27b-it",
+        "size": "~55GB",
+        "description": "Google'ın büyük modeli",
+        "recommended": False,
+        "category": "large"
+    },
+    {
+        "id": "command-r-plus",
+        "name": "Command R+",
+        "path": "CohereForAI/c4ai-command-r-plus",
+        "size": "~100GB",
+        "description": "RAG ve araç kullanımı için optimize",
+        "recommended": False,
+        "category": "large"
+    },
+    
+    # === ORTA BOY MODELLER (10B-30B) ===
+    {
+        "id": "qwen2.5-32b",
+        "name": "Qwen2.5 32B Instruct",
+        "path": "Qwen/Qwen2.5-32B-Instruct",
+        "size": "~60GB",
+        "description": "Mükemmel fiyat/performans dengesi",
+        "recommended": True,
+        "category": "medium"
+    },
+    {
+        "id": "qwen2.5-14b",
+        "name": "Qwen2.5 14B Instruct",
+        "path": "Qwen/Qwen2.5-14B-Instruct",
+        "size": "~28GB",
+        "description": "Hızlı ve akıllı, günlük kullanım için ideal",
+        "recommended": True,
+        "category": "medium"
+    },
+    {
+        "id": "mistral-nemo",
+        "name": "Mistral Nemo 12B",
+        "path": "mistralai/Mistral-Nemo-Instruct-2407",
+        "size": "~24GB",
+        "description": "Yeni nesil orta boy model",
+        "recommended": True,
+        "category": "medium"
+    },
+    {
+        "id": "phi3-medium",
+        "name": "Phi-3 Medium 14B",
+        "path": "microsoft/Phi-3-medium-128k-instruct",
+        "size": "~28GB",
+        "description": "Microsoft'un orta boy modeli, 128K context",
+        "recommended": True,
+        "category": "medium"
+    },
+    {
+        "id": "deepseek-16b",
+        "name": "DeepSeek 16B",
+        "path": "deepseek-ai/deepseek-coder-16b-instruct",
+        "size": "~32GB",
+        "description": "Kod ve genel amaçlı",
+        "recommended": False,
+        "category": "medium"
+    },
+    
+    # === KÜÇÜK/HIZLI MODELLER (<10B) - Düşük RAM için ideal ===
     {
         "id": "qwen2.5-7b",
         "name": "Qwen2.5 7B Instruct",
         "path": "Qwen/Qwen2.5-7B-Instruct",
         "size": "~15GB",
-        "description": "Genel amaçlı, hızlı ve etkili",
-        "recommended": True
+        "description": "Genel amaçlı, hızlı ve etkili - ÖNERİLEN",
+        "recommended": True,
+        "category": "small"
     },
     {
         "id": "llama3.2-3b",
@@ -172,7 +308,8 @@ AVAILABLE_MODELS = [
         "path": "meta-llama/Llama-3.2-3B-Instruct",
         "size": "~7GB",
         "description": "Meta'nın hafif modeli, düşük RAM için ideal",
-        "recommended": True
+        "recommended": True,
+        "category": "small"
     },
     {
         "id": "phi3-mini",
@@ -180,41 +317,167 @@ AVAILABLE_MODELS = [
         "path": "microsoft/Phi-3-mini-4k-instruct",
         "size": "~8GB",
         "description": "Microsoft'un kompakt ama güçlü modeli",
-        "recommended": True
+        "recommended": True,
+        "category": "small"
     },
     {
-        "id": "gemma2-2b",
-        "name": "Gemma 2 2B",
-        "path": "google/gemma-2-2b-it",
-        "size": "~5GB",
-        "description": "Google'ın ultra hafif modeli",
-        "recommended": False
+        "id": "gemma2-9b",
+        "name": "Gemma 2 9B",
+        "path": "google/gemma-2-9b-it",
+        "size": "~18GB",
+        "description": "Google'ın dengeli modeli",
+        "recommended": False,
+        "category": "small"
     },
     {
         "id": "mistral-7b",
-        "name": "Mistral 7B Instruct",
+        "name": "Mistral 7B v0.3",
         "path": "mistralai/Mistral-7B-Instruct-v0.3",
         "size": "~15GB",
         "description": "Popüler açık kaynak model",
-        "recommended": False
-    },
-    {
-        "id": "qwen2.5-14b",
-        "name": "Qwen2.5 14B Instruct",
-        "path": "Qwen/Qwen2.5-14B-Instruct",
-        "size": "~28GB",
-        "description": "Daha büyük, daha akıllı (GPU önerilir)",
-        "recommended": False
+        "recommended": False,
+        "category": "small"
     },
     {
         "id": "llama3.1-8b",
         "name": "Llama 3.1 8B Instruct",
-        "path": "meta-llama/Llama-3.1-8B-Instruct",
+        "path": "meta-llama/Meta-Llama-3.1-8B-Instruct",
         "size": "~16GB",
-        "description": "Meta'nın dengeli modeli",
-        "recommended": False
+        "description": "Meta'nın güncel 8B modeli",
+        "recommended": False,
+        "category": "small"
+    },
+    {
+        "id": "stablelm-2-zephyr",
+        "name": "StableLM 2 Zephyr 1.6B",
+        "path": "stabilityai/stablelm-2-zephyr-1_6b",
+        "size": "~4GB",
+        "description": "Ultra hafif, eski PC'ler için",
+        "recommended": False,
+        "category": "tiny"
+    },
+    {
+        "id": "tinyllama",
+        "name": "TinyLlama 1.1B",
+        "path": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+        "size": "~2GB",
+        "description": "En küçük model, test için ideal",
+        "recommended": False,
+        "category": "tiny"
+    },
+    {
+        "id": "qwen2.5-0.5b",
+        "name": "Qwen2.5 0.5B",
+        "path": "Qwen/Qwen2.5-0.5B-Instruct",
+        "size": "~1GB",
+        "description": "Nano model, anında yanıt",
+        "recommended": False,
+        "category": "tiny"
     }
 ]
+
+# Yerel model tarama fonksiyonu
+def scan_local_models():
+    """Bilgisayardaki tüm potansiyel LLM modellerini otomatik tarar"""
+    found_models = []
+    
+    # Taranacak kök dizinler
+    search_roots = []
+    if os.name == 'nt':  # Windows
+        drives = [f"{d}:\\" for d in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" if os.path.exists(f"{d}:")]
+        search_roots.extend(drives)
+        user_profile = os.environ.get('USERPROFILE')
+        if user_profile:
+            search_roots.append(user_profile)
+    else:  # Linux/Mac
+        search_roots.append(os.path.expanduser("~"))
+        search_roots.append("/mnt")
+        search_roots.append("/media")
+        search_roots.append("/home")
+    
+    # Aranacak klasör ve dosya desenleri
+    target_keywords = ['models', 'huggingface', 'hub', 'llm', 'ai', 'weights', 'safetensors', 'gguf']
+    valid_extensions = ['.safetensors', '.bin', '.gguf', '.pt', '.pth', '.onnx']
+    
+    scanned_count = 0
+    max_scans = 10000  # Performans sınırı
+    
+    print("🔍 Yerel modeller taranıyor... Bu işlem birkaç saniye sürebilir.")
+    
+    try:
+        for root_path in search_roots:
+            if not os.path.exists(root_path):
+                continue
+                
+            for dirpath, dirnames, filenames in os.walk(root_path):
+                if scanned_count > max_scans:
+                    break
+                
+                # Klasör adı kontrolü (hızlandırma)
+                dirname_lower = os.path.basename(dirpath).lower()
+                path_lower = dirpath.lower()
+                
+                # Hedef klasörlerde miyiz?
+                in_target_folder = any(kw in dirname_lower or kw in path_lower for kw in target_keywords)
+                
+                # Dosya kontrolü
+                for file in filenames:
+                    scanned_count += 1
+                    
+                    # Uzantı kontrolü
+                    if any(file.endswith(ext) for ext in valid_extensions):
+                        full_path = os.path.join(dirpath, file)
+                        
+                        try:
+                            size_gb = os.path.getsize(full_path) / (1024**3)
+                            
+                            # Sadece makul boyuttaki dosyalar (>100MB)
+                            if size_gb < 0.1:
+                                continue
+                            
+                            # Model adı tahmini
+                            model_name = os.path.splitext(file)[0]
+                            if model_name.lower() in ['model', 'pytorch_model', 'pytorch_model_bin']:
+                                parent = os.path.basename(dirpath)
+                                if parent and len(parent) > 3:
+                                    model_name = parent
+                            
+                            # Tekrarları önle
+                            is_duplicate = any(m['path'] == full_path for m in found_models)
+                            if not is_duplicate:
+                                found_models.append({
+                                    "id": f"local_{scanned_count}",
+                                    "name": f"{model_name} ({size_gb:.2f} GB)",
+                                    "path": full_path,
+                                    "size": f"~{size_gb:.1f}GB",
+                                    "type": "local",
+                                    "description": "Yerel diskte bulundu - Otomatik tarama",
+                                    "recommended": True,
+                                    "category": "local",
+                                    "is_local_file": True
+                                })
+                        except (OSError, PermissionError):
+                            pass  # Erişim hatası
+                
+                # Derinlik sınırlaması (çok derine inmesin)
+                depth = dirpath.count(os.sep) - root_path.count(os.sep)
+                if depth > 8:
+                    dirnames.clear()
+                    
+    except PermissionError:
+        pass  # İzin hatalarını yut
+    except Exception as e:
+        print(f"Tarama sırasında hata: {e}")
+
+    print(f"✅ {len(found_models)} yerel model bulundu!")
+    return found_models
+
+
+def get_all_models():
+    """Hem preset hem de yerel modelleri birleştir"""
+    local_models = scan_local_models()
+    # Yerel modelleri başa ekle
+    return local_models + AVAILABLE_MODELS
 
 app = Flask(__name__)
 CORS(app)
@@ -242,9 +505,10 @@ def get_model():
 
 @app.route('/api/models', methods=['GET'])
 def list_models():
-    """Kullanılabilir modelleri listele"""
+    """Kullanılabilir modelleri listele - yerel + preset"""
+    all_models = get_all_models()
     return jsonify({
-        "models": AVAILABLE_MODELS,
+        "models": all_models,
         "current_model": current_model,
         "model_loaded": model_instance is not None,
         "loading": model_loading
@@ -570,7 +834,25 @@ def system_info():
     })
 
 
+
+def find_free_port(start_port=5000):
+    """Kullanılmayan bir port bul"""
+    port = start_port
+    while True:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(('0.0.0.0', port))
+                return port
+            except OSError:
+                port += 1
+
+
 if __name__ == '__main__':
+    print("=" * 60)
+    
+    # Otomatik port bulma
+    port = find_free_port(5000)
+    
     print("=" * 60)
     print("🚀 AirLLM Studio Başlatılıyor...")
     print("=" * 60)
@@ -579,8 +861,11 @@ if __name__ == '__main__':
         print(f"🎮 GPU: {torch.cuda.get_device_name(0)}")
     print(f"💾 RAM: {psutil.virtual_memory().total / 1024**3:.1f} GB")
     print("=" * 60)
-    print("📡 Backend http://localhost:5000 adresinde çalışıyor")
-    print("🌐 Frontend'i http://localhost:8080 adresinden açın")
+    print(f"📡 Sunucu http://localhost:{port} adresinde çalışıyor")
+    print(f"🌐 Tarayıcıda http://localhost:{port} adresini açın")
+    print("=" * 60)
+    print("🔍 Yerel modeller otomatik taranacak...")
+    print("💡 İpucu: İlk model yükleme sırasında internet bağlantısı gerekir")
     print("=" * 60)
     
-    app.run(debug=True, host='0.0.0.0', port=5000, threaded=True)
+    app.run(debug=False, host='0.0.0.0', port=port, threaded=True)

@@ -4,12 +4,10 @@
 __pycache__/
 *.o
 *.obj
-dist/
-build/
-*.exe
-*.dll
 *.so
-*.a
+*.dll
+*.exe
+*.class
 *.out
 
 # Dependencies
@@ -18,8 +16,10 @@ venv/
 node_modules/
 .mypy_cache/
 .pytest_cache/
-pip-log.txt
-pip-selfcheck.json
+dist/
+build/
+target/
+.gradle/
 
 # Logs and temp files
 *.log
@@ -38,7 +38,7 @@ pip-selfcheck.json
 *.swp
 *.swo
 
-# OS
+# System
 .DS_Store
 Thumbs.db
 
