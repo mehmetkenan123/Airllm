@@ -1,0 +1,12 @@
+# Git hooks configuration
+commit-msg:
+  commands:
+    - command: npx --no-install commitlint -e
+      stage: commit
+
+pre-commit:
+  commands:
+    - command: npx --no-install biome check --write --no-errors-on-unmatched
+      stage: commit
+    - command: npx --no-install tsc --noEmit
+      stage: commit

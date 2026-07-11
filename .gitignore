@@ -1,43 +1,14 @@
 ```
-# Database
-codex-ide/codex.db
-
-# Executables
-codex-ide/run.bat
-
 # Dependencies
 node_modules/
-.codex-ide/node_modules/
+.pnpm-store/
+.npm/
 
 # Build outputs
 dist/
 build/
 target/
-.codex-ide/dist/
-.codex-ide/build/
-
-# Package manager caches
-.pnpm-store/
-.yarn/
-.npm/
-
-# Logs
-*.log
-
-# Environment
-.env
-.env.local
-.env.*
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
+out/
 
 # Python
 __pycache__/
@@ -45,18 +16,36 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
+env/
 venv/
 .venv/
-.codex-ide/venv/
-.codex-ide/.venv/
+.env
+.env.local
+.env.*
 
-# Node.js
+# Logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# TypeScript
-*.tsbuildinfo
-.next/
-.nuxt/
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Temporary files
+*.tmp
+*.temp
 ```
