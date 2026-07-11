@@ -1,1 +1,43 @@
-Nothing should be ignored based on the provided file changes. The only modified file is `airllm-studio/frontend/index.html`, which is a source file and should not be ignored.
+```
+# Dependencies
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Environment files
+.env
+.env.local
+.env.*
+
+# Logs
+*.log
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Coverage reports
+coverage/
+htmlcov/
+.coverage
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*$pycache$*
+```

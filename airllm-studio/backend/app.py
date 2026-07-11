@@ -10,12 +10,15 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 import hf_transfer
 from pathlib import Path
+from airllm import AutoModel as AirLLMAutoModel
 
-# AirLLM benzeri katman katman yükleme sistemi
+# AirLLM entegrasyonu ile gelişmiş katman katman yükleme sistemi
 class LayeredLLM:
-    """Düşük RAM'li sistemler için katman katman model yükleme ve çalıştırma"""
+    """Düşük RAM'li sistemler için katman katman model yükleme ve çalıştırma
+    AirLLM kütüphanesi kullanılarak optimize edilmiştir.
+    """
     
-    def __init__(self, model_name="Qwen/Qwen2.5-7B-Instruct"):
+    def __init__(self, model_name="Qwen/Qwen2.5-7B-Instruct", use_airllm=True):
         self.model_name = model_name
         self.tokenizer = None
         self.model = None
@@ -24,6 +27,7 @@ class LayeredLLM:
         self.total_layers = 0
         self.current_layer = 0
         self.model_cache_dir = "/workspace/airllm-studio/models"
+        self.use_airllm = use_airllm
         os.makedirs(self.model_cache_dir, exist_ok=True)
         
     def load_tokenizer(self):
@@ -39,44 +43,60 @@ class LayeredLLM:
         print("Tokenizer hazır!")
         
     def load_model_layered(self):
-        """Modeli katman katman yükle - düşük RAM için optimize edilmiş"""
+        """Modeli katman katman yükle - düşük RAM için optimize edilmiş
+        AirLLM kullanılarak 4GB GPU'da 70B modeller çalıştırılabilir
+        """
         print(f"Model yükleniyor (katman katman): {self.model_name}")
         print(f"Hedef cihaz: {self.device}")
+        print(f"AirLLM kullanılıyor: {self.use_airllm}")
         
-        # Model yapılandırmasını al
-        from transformers import AutoConfig
-        config = AutoConfig.from_pretrained(
-            self.model_name,
-            cache_dir=self.model_cache_dir,
-            trust_remote_code=True
-        )
-        
-        # Katman sayısını belirle
-        if hasattr(config, 'num_hidden_layers'):
-            self.total_layers = config.num_hidden_layers
-        elif hasattr(config, 'n_layer'):
-            self.total_layers = config.n_layer
-        else:
-            self.total_layers = 32  # Varsayılan
+        try:
+            if self.use_airllm and self.device == "cuda":
+                # AirLLM ile yükleme - çok daha az VRAM kullanır
+                print("AirLLM AutoModel ile yükleme yapılıyor...")
+                self.model = AirLLMAutoModel.from_pretrained(
+                    self.model_name,
+                    cache_dir=self.model_cache_dir,
+                    device_map='auto',
+                    compression='none',  # Quantization olmadan
+                    trust_remote_code=True
+                )
+                print("AirLLM ile model başarıyla yüklendi!")
+            else:
+                # Geleneksel transformers yükleme
+                print("Transformers AutoModel ile yükleme yapılıyor...")
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    self.model_name,
+                    cache_dir=self.model_cache_dir,
+                    device_map="auto" if self.device == "cuda" else None,
+                    torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
+                    low_cpu_mem_usage=True,
+                    trust_remote_code=True,
+                    offload_folder="/workspace/airllm-studio/offload",
+                    offload_state_dict=True
+                )
+                print("Transformers ile model başarıyla yüklendi!")
             
-        print(f"Toplam katman sayısı: {self.total_layers}")
-        
-        # Modeli yükle ama ağırlıkları CPU'da tut
-        self.model = AutoModelForCausalLM.from_pretrained(
-            self.model_name,
-            cache_dir=self.model_cache_dir,
-            device_map="auto" if self.device == "cuda" else None,
-            torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
-            low_cpu_mem_usage=True,
-            trust_remote_code=True,
-            offload_folder="/workspace/airllm-studio/offload",
-            offload_state_dict=True
-        )
-        
-        os.makedirs("/workspace/airllm-studio/offload", exist_ok=True)
-        
-        print(f"Model başarıyla yüklendi! {self.total_layers} katman")
-        return True
+            # Model info
+            if hasattr(self.model.config, 'num_hidden_layers'):
+                self.total_layers = self.model.config.num_hidden_layers
+            elif hasattr(self.model.config, 'n_layer'):
+                self.total_layers = self.model.config.n_layer
+            else:
+                self.total_layers = 32
+                
+            os.makedirs("/workspace/airllm-studio/offload", exist_ok=True)
+            print(f"Toplam katman sayısı: {self.total_layers}")
+            return True
+            
+        except Exception as e:
+            print(f"Model yükleme hatası: {e}")
+            # Fallback: Transformers ile dene
+            if self.use_airllm:
+                print("AirLLM başarısız, Transformers ile deneniyor...")
+                self.use_airllm = False
+                return self.load_model_layered()
+            raise e
         
     def generate(self, prompt, max_new_tokens=512, temperature=0.7, stream_callback=None):
         """Metin üretimi - katman katman işleme"""
