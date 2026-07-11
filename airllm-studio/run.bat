@@ -1,20 +1,41 @@
 @echo off
+chcp 65001 >nul
+title AirLLM Studio - Tek Tikla Baslatma
+cls
+
 echo ========================================
-echo   AirLLM Studio - Hızlı Başlatıcı
+echo   AirLLM Studio - Tek Tikla Baslatma
 echo ========================================
 echo.
 
-REM Eğer EXE varsa direkt çalıştır
-if exist "dist\AirLLM_Studio.exe" (
-    echo 🚀 AirLLM Studio başlatılıyor...
-    start dist\AirLLM_Studio.exe
+REM Python kontrolu
+python --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo HATA: Python yuklu degil!
     echo.
-    echo ✅ Uygulama başlatıldı!
-    echo 🌐 Tarayıcınızda http://localhost:5000 adresini kontrol edin.
-) else (
-    echo ⚠️  EXE dosyası bulunamadı!
-    echo.
-    echo Önce build.bat dosyasını çalıştırarak EXE oluşturun.
+    echo 1. https://python.org adresine gidin
+    echo 2. Python 3.8 veya uzerini yukleyin
+    echo 3. Kurulum sirasinda "Add Python to PATH" secenegini MUTLAKA isaretleyin
     echo.
     pause
+    exit /b 1
 )
+
+echo [1/3] Python bulundu - 
+python --version
+
+echo [2/3] Gerekli kutuphaneler kontrol ediliyor...
+pip install flask flask-cors torch transformers psutil --quiet 2>nul
+echo     Kutuphaneler hazir!
+
+echo [3/3] AirLLM Studio baslatiliyor...
+echo.
+echo ----------------------------------------
+echo Tarayicinizda otomatik acilacak...
+echo Elle erismek icin: http://localhost:5000
+echo ----------------------------------------
+echo.
+
+python main.py
+
+pause
