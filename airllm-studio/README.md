@@ -231,4 +231,24 @@ Bu proje açık kaynak lisansı altında dağıtılmaktadır.
 
 ---
 
-**AirLLM Studio** ile yerel AI deneyimini keşfedin! 🚀
+**AirLLM Studio** ile yerel AI deneyimini keşfedin! 🚀                                                                                                                                                                       
+# AirLLM Studio 🚀
+
+Düşük donanımlı bilgisayarlarda bile devasa LLM'leri (70B, 405B) çalıştırabilen, tam donanımlı bir Yapay Zeka IDE'si.
+
+## Özellikler
+- 🧠 **AirLLM Entegrasyonu**: Katman katman model yükleme ile düşük VRAM kullanımı.
+- 🔍 **Otomatik Tarama**: Bilgisayarınızdaki `.safetensors`, `.gguf` dosyalarını otomatik bulur.
+- ☁️ **HuggingFace Market**: Tek tıkla yüzlerce modeli indirip çalıştırın.
+- 💻 **IDE Arayüzü**: Dosya yöneticisi, terminal ve kod editörü entegre.
+- 📦 **Tek Dosya EXE**: Kurulum gerektirmez, çift tıklayın çalıştırın.
+
+## Kurulum
+1. Depoyu klonlayın: `git clone https://github.com/KULLANICI/airllm-studio.git`
+2. `build.bat` dosyasına çift tıklayın.
+3. İşlem bitince `dist/AirLLM_Studio.exe` otomatik açılır.
+
+## Kullanım
+- Uygulama açılınca "Modeller" sekmesine gidin.
+- "Yerel Diski Tara" diyerek kendi modellerinizi bulun veya listeden indirin.
+- "Sohbet" sekmesinde yapay zeka ile konuşmaya başlayın.
