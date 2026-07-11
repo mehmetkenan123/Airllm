@@ -1,1 +1,10 @@
-Nothing should be ignored based on the provided file changes. The only modified file is `airllm-studio/frontend/index.html`, which is a source file and should not be ignored.
+venv/
+__pycache__/
+*.pyc
+dist/
+build/
+*.spec
+uploads/
+models/
+.env
+.DS_Store
