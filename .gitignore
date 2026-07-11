@@ -1,104 +1,50 @@
 ```
-# Dependencies
-venv/
-.venv/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
+# Windows batch files
+*.bat
+*.cmd
 
-# Build artifacts
-build/
-dist/
-*.egg-info/
-
-# Logs
+# Logs and temp files
 *.log
+*.tmp
+*.swp
 
-# Environment variables
+# Environment
 .env
 .env.local
 *.env.*
 
-# Editor files
+# Editors
 .vscode/
 .idea/
-*.swp
-*.swo
-*.tmp
 
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# Coverage reports
-.coverage
-coverage/
-htmlcov/
-
-# Python specific
-.Python
-*.so
+# Python
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.py~
-*.pyc.*
-__pycache__/
-*.py-[0-9]*
-*.pyc.[0-9]*
-
-# MyPy cache
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pytest cache
-.pytest_cache/
-
-# Jupyter notebooks
-.ipynb_checkpoints/
-
-# Virtual environments
-.venv/
+.Python
 venv/
+.venv/
+.env
 env/
 ENV/
 
-# Node.js (if present)
+# Node.js
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Gradle
-.gradle/
+# Build outputs
+dist/
 build/
-
-# Target (Rust, Java, etc.)
 target/
+out/
+coverage/
+htmlcov/
+.coverage
 
-# Compressed files
-*.zip
-*.gz
-*.tar
-*.tgz
-*.bz2
-*.xz
-*.7z
-*.rar
-*.zst
-*.lz4
-*.lzh
-*.cab
-*.arj
-*.rpm
-*.deb
-*.Z
-*.lz
-*.lzo
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.tar.zst
+# OS generated files
+.DS_Store
+Thumbs.db
 ```
