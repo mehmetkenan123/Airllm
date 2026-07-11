@@ -34,14 +34,43 @@ Düşük donanımlı bilgisayarlarda bile büyük dil modellerini (LLM) çalış
 
 ## 📦 Kurulum
 
-### 1. Bağımlılıkları Yükleyin
+### 🎯 HIZLI BAŞLANGIÇ (Windows - EXE ile)
+
+#### 1. EXE Dosyasını Oluşturun
+
+```bash
+# Proje klasöründe build.bat dosyasına çift tıklayın
+# veya terminalde:
+build.bat
+```
+
+Bu komut:
+- Python sanal ortamı oluşturur
+- Tüm bağımlılıkları yükler
+- `dist\AirLLM_Studio.exe` dosyasını oluşturur
+
+#### 2. Uygulamayı Başlatın
+
+```bash
+# dist klasöründeki AirLLM_Studio.exe dosyasına çift tıklayın
+# veya:
+run.bat
+```
+
+Uygulama otomatik olarak tarayıcınızda açılacaktır!
+
+---
+
+### 🔧 Alternatif: Manuel Kurulum (Python ile)
+
+#### 1. Bağımlılıkları Yükleyin
 
 ```bash
 cd /workspace/airllm-studio/backend
 pip install -r requirements.txt
 ```
 
-### 2. Backend'i Başlatın
+#### 2. Backend'i Başlatın
 
 ```bash
 cd /workspace/airllm-studio/backend
@@ -50,7 +79,7 @@ python app.py
 
 Backend `http://localhost:5000` adresinde çalışacaktır.
 
-### 3. Frontend'i Başlatın
+#### 3. Frontend'i Başlatın
 
 Yeni bir terminal penceresinde:
 
@@ -61,7 +90,7 @@ python -m http.server 8080
 
 Frontend `http://localhost:8080` adresinde çalışacaktır.
 
-### 4. Tarayıcıda Açın
+#### 4. Tarayıcıda Açın
 
 ```
 http://localhost:8080
@@ -162,12 +191,20 @@ Yüklenen dosyalar:
 
 ## 📊 Sistem Gereksinimleri
 
-### Minimum:
+### EXE Çalıştırmak İçin:
+- Windows 10/11 (64-bit)
+- .NET Framework 4.7+ (otomatik yüklenebilir)
+- Minimum 8 GB RAM
+- 20 GB boş disk alanı
+
+### Manuel Kurulum İçin:
+#### Minimum:
 - CPU: 4 çekirdek
 - RAM: 8 GB
 - Disk: 20 GB boş alan
+- Python 3.9+
 
-### Önerilen:
+#### Önerilen:
 - CPU: 8+ çekirdek
 - RAM: 16+ GB
 - GPU: 8+ GB VRAM (opsiyonel)
