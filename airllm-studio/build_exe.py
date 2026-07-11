@@ -1,32 +1,45 @@
+# PyInstaller ile EXE Oluşturma Scripti
+# Bu script, AirLLM Studio'yu tek bir .exe dosyasına dönüştürür.
+
 import PyInstaller.__main__
 import os
 import shutil
 
-# Önceki buildleri temizle
-if os.path.exists('dist'):
-    shutil.rmtree('dist')
-if os.path.exists('build'):
-    shutil.rmtree('build')
-if os.path.exists('AirLLM_Studio.spec'):
-    os.remove('AirLLM_Studio.spec')
+# Proje kök dizini
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-print("🚀 AirLLM Studio EXE paketleniyor...")
+# Önceki build kalıntılarını temizle
+for folder in ['build', 'dist']:
+    path = os.path.join(BASE_DIR, folder)
+    if os.path.exists(path):
+        shutil.rmtree(path)
+        print(f"🧹 {folder} klasörü temizlendi.")
+
+spec_file = os.path.join(BASE_DIR, 'AirLLM_Studio.spec')
+if os.path.exists(spec_file):
+    os.remove(spec_file)
+    print("🧹 Eski .spec dosyası temizlendi.")
+
+print("\n🚀 AirLLM Studio EXE paketleniyor...\n")
 
 PyInstaller.__main__.run([
-    'backend/app.py',
+    'main.py',
     '--name=AirLLM_Studio',
     '--onefile',
-    '--windowed',  # Konsol penceresini gizle (isteğe bağlı, debug için kaldırılabilir)
+    '--windowed',  # Konsol penceresini gizle (GUI uygulaması gibi)
+    '--icon=NONE',  # İsterseniz .ico dosyası ekleyebilirsiniz
     '--add-data=frontend;frontend',  # Frontend klasörünü dahil et
     '--hidden-import=flask',
-    '--hidden-import=transformers',
+    '--hidden-import=werkzeug',
     '--hidden-import=torch',
+    '--hidden-import=transformers',
     '--hidden-import=accelerate',
-    '--icon=NONE',  # İsterseniz buraya .ico dosyası yolu verebilirsiniz
-    '--clean',
-    '--noconfirm'
+    '--collect-all=transformers',
+    '--collect-all=accelerate',
+    '--clean',  # Önbelleği temizle
+    '--noconfirm',  # Onay sorma
 ])
 
-print("\n✅ İşlem Tamam!")
-print("📦 Oluşturulan EXE dosyası: dist/AirLLM_Studio.exe")
-print("\n💡 Not: İlk çalıştırmada model indirme işlemi internet hızınıza göre zaman alabilir.")
+print("\n✅ Paketleme tamamlandı!")
+print("📦 EXE dosyası: dist/AirLLM_Studio.exe")
+print("\n⚠️ NOT: İlk çalıştırmada model indirme işlemi olabilir.")
