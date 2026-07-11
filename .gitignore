@@ -8,43 +8,16 @@ __pycache__/
 env/
 venv/
 .venv/
-.ENV
-.python-version
-
-# Logs
-*.log
-
-# Environment
-.env
-.env.local
-.env.*
-
-# Dependencies
-node_modules/
-julia-*/
-zig*/
-target/
-.gradle/
-
-# Coverage reports
-coverage/
-htmlcov/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
 .coverage
-
-# Editor/IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*.tmp
-
-# OS
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
 .DS_Store
 Thumbs.db
-
-# Build artifacts
-dist/
-build/
-.mypy_cache/
-.pytest_cache/
 ```
