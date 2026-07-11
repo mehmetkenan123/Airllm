@@ -3,861 +3,625 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AirLLM Studio - 4GB VRAM'de 70B+ Modeller</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+    <title>AirLLM Studio - Akıllı Kodlama Ortamı</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --bg-primary: #0d1117;
-            --bg-secondary: #161b22;
-            --bg-tertiary: #21262d;
-            --border-color: #30363d;
-            --text-primary: #c9d1d9;
-            --text-secondary: #8b949e;
-            --accent-color: #58a6ff;
-            --accent-glow: rgba(88, 166, 255, 0.3);
-            --success-color: #3fb950;
-            --danger-color: #f85149;
-            --warning-color: #d29922;
-            --purple-color: #a371f7;
-            --sidebar-width: 280px;
-            --header-height: 60px;
-            --transition-speed: 0.3s;
+            --bg-primary: #1e1e2e;
+            --bg-secondary: #252537;
+            --bg-tertiary: #2d2d44;
+            --text-primary: #cdd6f4;
+            --text-secondary: #a6adc8;
+            --accent: #89b4fa;
+            --accent-hover: #b4befe;
+            --success: #a6e3a1;
+            --warning: #f9e2af;
+            --error: #f38ba8;
+            --border: #45475a;
+            --sidebar-width: 260px;
+            --activity-bar-width: 50px;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
+
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            font-family: 'Inter', sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
+            overflow: hidden;
             height: 100vh;
-            overflow: hidden;
+        }
+
+        .app-container { display: flex; height: 100vh; }
+
+        .activity-bar {
+            width: var(--activity-bar-width);
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
+            align-items: center;
+            padding: 8px 0;
         }
 
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 10px;
-            height: 10px;
-        }
-        ::-webkit-scrollbar-track {
-            background: var(--bg-secondary);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: var(--border-color);
-            border-radius: 5px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--text-secondary);
-        }
-
-        /* Header */
-        header {
-            height: var(--header-height);
-            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
-            border-bottom: 1px solid var(--border-color);
+        .activity-icon {
+            width: 48px;
+            height: 48px;
             display: flex;
             align-items: center;
-            padding: 0 25px;
-            justify-content: space-between;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            z-index: 100;
-        }
-
-        .logo {
-            font-size: 1.4rem;
-            font-weight: bold;
-            background: linear-gradient(135deg, var(--accent-color) 0%, var(--purple-color) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            text-shadow: 0 0 20px var(--accent-glow);
-        }
-
-        .logo-icon {
-            font-size: 1.8rem;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-
-        .status-bar {
-            display: flex;
-            gap: 20px;
-            font-size: 0.85rem;
+            justify-content: center;
             color: var(--text-secondary);
-            align-items: center;
-        }
-
-        .status-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 12px;
-            background: var(--bg-tertiary);
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-            transition: all var(--transition-speed);
-        }
-
-        .status-item:hover {
-            border-color: var(--accent-color);
-            background: var(--bg-secondary);
-        }
-
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: var(--success-color);
-            box-shadow: 0 0 10px var(--success-color);
-            animation: blink 2s infinite;
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .status-dot.loading {
-            background: var(--warning-color);
-            box-shadow: 0 0 10px var(--warning-color);
-        }
-
-        .status-dot.error {
-            background: var(--danger-color);
-            box-shadow: 0 0 10px var(--danger-color);
-        }
-
-        /* Main Layout */
-        .main-container {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-            background: radial-gradient(ellipse at top, rgba(88, 166, 255, 0.05) 0%, transparent 50%);
-        }
-
-        /* Sidebar */
-        .sidebar {
-            width: var(--sidebar-width);
-            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
-            border-right: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            backdrop-filter: blur(10px);
-        }
-
-        .sidebar-tabs {
-            display: flex;
-            border-bottom: 1px solid var(--border-color);
-            background: var(--bg-tertiary);
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: 14px 12px;
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: all var(--transition-speed);
-            font-weight: 500;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .tab-btn::before {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: var(--accent-color);
-            transform: scaleX(0);
-            transition: transform var(--transition-speed);
-        }
-
-        .tab-btn:hover {
-            color: var(--text-primary);
-            background: var(--bg-tertiary);
-        }
-
-        .tab-btn.active {
-            color: var(--accent-color);
-            background: var(--bg-tertiary);
-        }
-
-        .tab-btn.active::before {
-            transform: scaleX(1);
-        }
-
-        .sidebar-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 12px;
-        }
-
-        .file-tree-item {
-            padding: 10px 12px;
             cursor: pointer;
             border-radius: 8px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 0.9rem;
-            transition: all var(--transition-speed);
-            margin-bottom: 4px;
-            border: 1px solid transparent;
+            margin: 4px 0;
+            transition: all 0.2s;
+            font-size: 20px;
         }
 
-        .file-tree-item:hover {
-            background: var(--bg-tertiary);
-            border-color: var(--border-color);
-            transform: translateX(4px);
-        }
+        .activity-icon:hover { color: var(--text-primary); background: var(--bg-tertiary); }
+        .activity-icon.active { color: var(--accent); background: var(--bg-tertiary); }
 
-        .file-tree-item.active {
-            background: rgba(88, 166, 255, 0.1);
-            border-color: var(--accent-color);
-            color: var(--accent-color);
-        }
-
-        .folder-icon { color: #d29922; font-size: 1.1em; }
-        .file-icon { color: #58a6ff; font-size: 1.1em; }
-        .model-icon { color: var(--purple-color); font-size: 1.1em; }
-
-        /* Editor Area */
-        .editor-area {
-            flex: 1;
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            background: var(--bg-primary);
-            position: relative;
         }
+
+        .sidebar-header {
+            padding: 12px 16px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .file-tree { flex: 1; overflow-y: auto; padding: 8px 0; }
+
+        .tree-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-secondary);
+            transition: all 0.15s;
+        }
+
+        .tree-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+        .tree-item.active { background: var(--bg-tertiary); color: var(--accent); }
+        .tree-item i { margin-right: 8px; width: 16px; text-align: center; }
+        .tree-item.folder { font-weight: 500; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
         .tabs-bar {
             display: flex;
             background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border);
             overflow-x: auto;
         }
 
-        .editor-tab {
-            padding: 12px 24px;
+        .tab {
+            display: flex;
+            align-items: center;
+            padding: 10px 16px;
             background: var(--bg-secondary);
-            border: none;
-            color: var(--text-secondary);
+            border-right: 1px solid var(--border);
             cursor: pointer;
-            border-right: 1px solid var(--border-color);
-            min-width: 140px;
-            transition: all var(--transition-speed);
-            position: relative;
+            font-size: 13px;
+            color: var(--text-secondary);
+            min-width: 150px;
+            transition: all 0.15s;
         }
 
-        .editor-tab:hover {
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
-        }
+        .tab:hover { background: var(--bg-tertiary); }
+        .tab.active { background: var(--bg-primary); color: var(--text-primary); border-bottom: 2px solid var(--accent); }
+        .tab-close { margin-left: auto; opacity: 0; transition: opacity 0.15s; }
+        .tab:hover .tab-close { opacity: 1; }
 
-        .editor-tab.active {
-            background: var(--bg-primary);
-            color: var(--accent-color);
-        }
+        .editor-container { flex: 1; display: flex; overflow: hidden; }
+        .editor-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
-        .editor-tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: -1px;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: var(--accent-color);
-        }
-
-        .code-editor {
+        .editor {
             flex: 1;
             background: var(--bg-primary);
-            border: none;
-            color: var(--text-primary);
-            padding: 24px;
-            font-family: 'Consolas', 'Monaco', 'Fira Code', monospace;
+            padding: 16px;
+            overflow: auto;
+            font-family: 'Fira Code', monospace;
             font-size: 14px;
             line-height: 1.6;
-            resize: none;
-            outline: none;
+            color: var(--text-primary);
         }
 
-        /* Right Panel (Chat & Models) */
-        .right-panel {
-            width: 420px;
-            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
-            border-left: 1px solid var(--border-color);
+        .code-content { white-space: pre; }
+
+        .ai-panel {
+            width: 400px;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            backdrop-filter: blur(10px);
         }
 
-        .panel-header {
-            padding: 15px;
-            border-bottom: 1px solid var(--border-color);
-            font-weight: bold;
-        }
-
-        .chat-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
+        .ai-header {
+            padding: 12px 16px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
             display: flex;
-            flex-direction: column;
-            gap: 15px;
+            align-items: center;
+            gap: 8px;
         }
 
-        .message {
-            max-width: 85%;
+        .ai-header i { color: var(--accent); }
+
+        .chat-messages { flex: 1; overflow-y: auto; padding: 16px; }
+
+        .chat-message {
+            margin-bottom: 16px;
             padding: 12px;
             border-radius: 8px;
+            font-size: 13px;
             line-height: 1.5;
         }
 
-        .message.user {
-            align-self: flex-end;
-            background: var(--accent-color);
-            color: white;
-        }
+        .chat-message.user { background: var(--bg-tertiary); border-left: 3px solid var(--accent); }
+        .chat-message.ai { background: var(--bg-tertiary); border-left: 3px solid var(--success); }
 
-        .message.ai {
-            align-self: flex-start;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-        }
-
-        .chat-input-area {
-            padding: 15px;
-            border-top: 1px solid var(--border-color);
-        }
+        .chat-input-area { padding: 16px; border-top: 1px solid var(--border); }
 
         .chat-input {
             width: 100%;
             padding: 12px;
             background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
             color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
             resize: none;
-            outline: none;
-            font-family: inherit;
         }
 
-        .send-btn {
-            width: 100%;
-            margin-top: 10px;
-            padding: 10px;
-            background: var(--accent-color);
+        .chat-input:focus { outline: none; border-color: var(--accent); }
+
+        .chat-actions { display: flex; gap: 8px; margin-top: 8px; }
+
+        .btn {
+            padding: 8px 16px;
             border: none;
             border-radius: 6px;
-            color: white;
-            font-weight: bold;
             cursor: pointer;
-            transition: opacity 0.2s;
-        }
-
-        .send-btn:hover { opacity: 0.9; }
-
-        /* Model List */
-        .model-list {
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.15s;
             display: flex;
-            flex-direction: column;
-            gap: 8px;
+            align-items: center;
+            gap: 6px;
         }
 
-        .model-item {
-            padding: 12px;
-            background: var(--bg-tertiary);
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
+        .btn-primary { background: var(--accent); color: var(--bg-primary); }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--border); }
 
-        .model-item:hover {
-            border-color: var(--accent-color);
-        }
-
-        .model-name {
-            font-weight: bold;
-            margin-bottom: 4px;
-        }
-
-        .model-info {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
+        .status-bar {
+            height: 24px;
+            background: var(--accent);
+            color: var(--bg-primary);
             display: flex;
+            align-items: center;
             justify-content: space-between;
+            padding: 0 12px;
+            font-size: 11px;
+            font-weight: 500;
         }
 
-        .badge {
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            background: var(--bg-secondary);
-        }
+        .status-left, .status-right { display: flex; gap: 16px; }
 
-        .badge.local { color: #3fb950; }
-        .badge.hf { color: #fca325; }
-
-        /* Terminal */
         .terminal-panel {
             height: 200px;
-            background: #000;
-            border-top: 1px solid var(--border-color);
-            padding: 10px;
-            font-family: 'Consolas', monospace;
-            font-size: 13px;
-            overflow-y: auto;
-            color: #33ff00;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
         }
 
-        .terminal-input {
+        .terminal-tabs { display: flex; padding: 8px 16px 0; gap: 8px; }
+        .terminal-tab { padding: 6px 12px; background: var(--bg-tertiary); border-radius: 6px 6px 0 0; font-size: 12px; cursor: pointer; }
+        .terminal-tab.active { background: var(--bg-primary); }
+
+        .terminal-content {
+            flex: 1;
+            padding: 12px 16px;
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+            overflow: auto;
+            color: var(--text-secondary);
+        }
+
+        .terminal-line { margin-bottom: 4px; }
+        .terminal-prompt { color: var(--success); }
+
+        .command-palette {
+            position: fixed;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%) scale(0.95);
+            width: 600px;
+            max-height: 400px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+        }
+
+        .command-palette.show { display: flex; animation: fadeIn 0.15s ease-out; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-50%) scale(0.95); }
+            to { opacity: 1; transform: translateX(-50%) scale(1); }
+        }
+
+        .command-input {
+            padding: 16px;
             background: transparent;
             border: none;
-            color: #33ff00;
-            width: 100%;
-            outline: none;
-            font-family: inherit;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
         }
 
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: var(--bg-primary); }
-        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        .command-input:focus { outline: none; }
+
+        .command-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+
+        .command-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .command-item:hover, .command-item.selected { background: var(--bg-tertiary); color: var(--text-primary); }
+        .command-item i { margin-right: 12px; width: 20px; color: var(--accent); }
+        .command-shortcut { margin-left: auto; font-size: 11px; color: var(--text-secondary); background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px; }
+
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
 
-        .hidden { display: none !important; }
+        .syntax-keyword { color: #cba6f7; font-weight: 600; }
+        .syntax-string { color: #a6e3a1; }
+        .syntax-comment { color: #6c7086; font-style: italic; }
+        .syntax-function { color: #89b4fa; }
+        .syntax-number { color: #fab387; }
+        .syntax-operator { color: #f38ba8; }
+        .syntax-class { color: #f9e2af; }
+        .syntax-decorator { color: #fab387; }
+
+        .typing-indicator { display: inline-flex; gap: 4px; }
+        .typing-indicator span {
+            width: 6px; height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-4px); }
+        }
     </style>
 </head>
 <body>
-    <header>
-        <div class="logo">
-            <span>🚀</span> AirLLM Studio
+    <div class="app-container">
+        <div class="activity-bar">
+            <div class="activity-icon active" title="Explorer"><i class="fas fa-folder"></i></div>
+            <div class="activity-icon" title="Search"><i class="fas fa-search"></i></div>
+            <div class="activity-icon" title="Source Control"><i class="fas fa-code-branch"></i></div>
+            <div class="activity-icon" title="Debug"><i class="fas fa-bug"></i></div>
+            <div class="activity-icon" title="Extensions"><i class="fas fa-puzzle-piece"></i></div>
+            <div class="activity-icon" title="AI Assistant"><i class="fas fa-robot"></i></div>
+            <div style="flex: 1;"></div>
+            <div class="activity-icon" title="Settings"><i class="fas fa-cog"></i></div>
         </div>
-        <div class="status-bar">
-            <div class="status-item">
-                <div class="status-dot"></div>
-                <span id="server-status">Bağlı</span>
-            </div>
-            <div class="status-item">
-                <span id="model-status">Model: Yok</span>
-            </div>
-            <div class="status-item">
-                <span id="ram-status">RAM: --</span>
-            </div>
-        </div>
-    </header>
 
-    <div class="main-container">
-        <!-- Sol Panel: Dosya Gezgini -->
         <div class="sidebar">
-            <div class="sidebar-tabs">
-                <button class="tab-btn active" onclick="switchTab('files')">📁 Dosyalar</button>
-                <button class="tab-btn" onclick="switchTab('models')">🤖 Modeller</button>
-            </div>
-            
-            <div id="files-content" class="sidebar-content">
-                <div style="padding: 10px; color: var(--text-secondary); font-size: 0.9rem;">
-                    Çalışma dizini yükleniyor...
+            <div class="sidebar-header">EXPLORER</div>
+            <div class="file-tree" id="fileTree">
+                <div class="tree-item folder" data-path="/workspace/airllm-studio">
+                    <i class="fas fa-chevron-down"></i>
+                    <i class="fas fa-folder-open"></i>
+                    <span>airllm-studio</span>
                 </div>
-            </div>
-            
-            <div id="models-content" class="sidebar-content hidden">
-                <div class="model-list" id="model-list-container">
-                    <!-- Modeller buraya yüklenecek -->
+                <div class="tree-item" data-path="backend/app.py" data-type="python">
+                    <i class="fab fa-python"></i>
+                    <span>app.py</span>
                 </div>
-            </div>
-        </div>
-
-        <!-- Orta Panel: Editör -->
-        <div class="editor-area">
-            <div class="tabs-bar" id="editor-tabs">
-                <!-- Sekmeler buraya -->
-            </div>
-            <textarea class="code-editor" id="code-editor" placeholder="Kod yazmaya başlayın veya bir dosya açın..."></textarea>
-            <div class="terminal-panel" id="terminal-output">
-                <div>AirLLM Terminal v1.0 - Hazır</div>
-                <div style="display: flex; margin-top: 5px;">
-                    <span>></span>
-                    <input type="text" class="terminal-input" id="terminal-input" placeholder="Komut girin..." onkeypress="handleTerminalKey(event)">
+                <div class="tree-item" data-path="frontend/index.html" data-type="html">
+                    <i class="fab fa-html5"></i>
+                    <span>index.html</span>
+                </div>
+                <div class="tree-item" data-path="run.bat" data-type="batch">
+                    <i class="fas fa-file-code"></i>
+                    <span>run.bat</span>
                 </div>
             </div>
         </div>
 
-        <!-- Sağ Panel: Sohbet -->
-        <div class="right-panel">
-            <div class="panel-header">
-                💬 AI Asistan
-            </div>
-            <div class="chat-container" id="chat-container">
-                <div class="message ai">
-                    Merhaba! Ben AirLLM asistanınızım. Kodlarınızda size yardımcı olabilirim, sorularınızı yanıtlayabilirim. Hangi modeli kullanmak istersiniz?
+        <div class="main-content">
+            <div class="tabs-bar" id="tabsBar">
+                <div class="tab active" data-file="app.py">
+                    <i class="fab fa-python" style="margin-right: 8px;"></i>
+                    app.py
+                    <span class="tab-close"><i class="fas fa-times"></i></span>
                 </div>
             </div>
-            <div class="chat-input-area">
-                <textarea class="chat-input" id="chat-input" rows="3" placeholder="Mesajınızı yazın..."></textarea>
-                <button class="send-btn" onclick="sendMessage()">Gönder</button>
+
+            <div class="editor-container">
+                <div class="editor-wrapper">
+                    <div class="editor" id="editor">
+                        <div class="code-content" id="codeContent" contenteditable="true"></div>
+                    </div>
+                </div>
+
+                <div class="ai-panel">
+                    <div class="ai-header">
+                        <i class="fas fa-brain"></i>
+                        <span>AI Kod Asistanı</span>
+                    </div>
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-message ai">
+                            👋 Merhaba! Ben sizin AI kod asistanınızım.
+                            <br><br>
+                            Şunları yapabilirim:
+                            <ul style="margin: 8px 0 0 16px;">
+                                <li>Kod tamamlama ve öneriler</li>
+                                <li>Hata analizi ve düzeltme</li>
+                                <li>Refactoring önerileri</li>
+                                <li>Test yazma</li>
+                                <li>Kod açıklama</li>
+                            </ul>
+                            <br>
+                            Nasıl yardımcı olabilirim?
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <textarea class="chat-input" id="chatInput" rows="3" placeholder="Sorunuzu yazın veya kod seçip Ctrl+L'ye basın..."></textarea>
+                        <div class="chat-actions">
+                            <button class="btn btn-primary" onclick="sendChat()">
+                                <i class="fas fa-paper-plane"></i> Gönder
+                            </button>
+                            <button class="btn btn-secondary" onclick="clearChat()">
+                                <i class="fas fa-trash"></i> Temizle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="terminal-panel">
+                <div class="terminal-tabs">
+                    <div class="terminal-tab active">Terminal</div>
+                    <div class="terminal-tab">Problemler</div>
+                    <div class="terminal-tab">Çıktı</div>
+                    <div class="terminal-tab">Debug Console</div>
+                </div>
+                <div class="terminal-content" id="terminalContent">
+                    <div class="terminal-line"><span class="terminal-prompt">➜</span> AirLLM Studio Terminal hazır</div>
+                    <div class="terminal-line"><span class="terminal-prompt">➜</span> Komut çalıştırmak için aşağıya yazın...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-left">
+                <span><i class="fas fa-code-branch"></i> main</span>
+                <span><i class="fas fa-sync-alt"></i> Ready</span>
+                <span><i class="fas fa-check-circle"></i> 0 Problems</span>
+            </div>
+            <div class="status-right">
+                <span>Ln 1, Col 1</span>
+                <span>Spaces: 4</span>
+                <span>UTF-8</span>
+                <span>Python</span>
+                <span><i class="fas fa-brain"></i> AI Active</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="command-palette" id="commandPalette">
+        <input type="text" class="command-input" id="commandInput" placeholder="Komut yazın veya '>' ile filtreleyin...">
+        <div class="command-list" id="commandList">
+            <div class="command-item selected">
+                <i class="fas fa-file"></i>
+                <span>Yeni Dosya</span>
+                <span class="command-shortcut">Ctrl+N</span>
+            </div>
+            <div class="command-item">
+                <i class="fas fa-folder-open"></i>
+                <span>Dosya Aç</span>
+                <span class="command-shortcut">Ctrl+O</span>
+            </div>
+            <div class="command-item">
+                <i class="fas fa-save"></i>
+                <span>Kaydet</span>
+                <span class="command-shortcut">Ctrl+S</span>
+            </div>
+            <div class="command-item">
+                <i class="fas fa-search"></i>
+                <span>Dosyada Ara</span>
+                <span class="command-shortcut">Ctrl+F</span>
+            </div>
+            <div class="command-item">
+                <i class="fas fa-magic"></i>
+                <span>AI: Kodu Açıkla</span>
+                <span class="command-shortcut">Ctrl+Shift+E</span>
+            </div>
+            <div class="command-item">
+                <i class="fas fa-wand-magic-sparkles"></i>
+                <span>AI: Refactor Öner</span>
+                <span class="command-shortcut">Ctrl+Shift+R</span>
+            </div>
+            <div class="command-item">
+                <i class="fas fa-flask"></i>
+                <span>AI: Test Oluştur</span>
+                <span class="command-shortcut">Ctrl+Shift+T</span>
+            </div>
+            <div class="command-item">
+                <i class="fas fa-terminal"></i>
+                <span>Terminal: Yeni Terminal</span>
+                <span class="command-shortcut">Ctrl+`</span>
             </div>
         </div>
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:5000/api';
-        let currentFile = null;
-        let openFiles = [];
-        let activeModel = null;
+        const sampleCode = `from flask import Flask, request, jsonify
+from flask_cors import CORS
+import os
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
-        // Sayfa yüklendiğinde
-        document.addEventListener('DOMContentLoaded', () => {
-            loadFileTree();
-            scanModels();
-            updateSystemStatus();
-        });
+# AirLLM Studio - Akıllı Kodlama Ortamı
+class LayeredLLM:
+    """Düşük RAM'li sistemler için optimize edilmiş model yükleme"""
+    
+    def __init__(self, model_name="Qwen/Qwen2.5-7B-Instruct"):
+        self.model_name = model_name
+        self.tokenizer = None
+        self.model = None
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        
+    def load_tokenizer(self):
+        """Tokenizer'ı yükle"""
+        print(f"Tokenizer yükleniyor: {self.model_name}")
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.model_name,
+            trust_remote_code=True
+        )
+        return self.tokenizer
+    
+    def generate(self, prompt, max_length=512):
+        """Metin üretimi yap"""
+        inputs = self.tokenizer.encode(prompt, return_tensors="pt")
+        outputs = self.model.generate(inputs, max_length=max_length)
+        return self.tokenizer.decode(outputs[0])
 
-        // Sistem durumunu güncelle
-        async function updateSystemStatus() {
-            setInterval(() => {
-                // RAM ve CPU bilgisi simülasyonu
-                document.getElementById('ram-status').innerText = `RAM: ${Math.floor(Math.random() * 30 + 20)}%`;
-            }, 3000);
+# Flask uygulaması
+app = Flask(__name__)
+CORS(app)
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    data = request.json
+    response = {"message": "Hello from AirLLM Studio!"}
+    return jsonify(response)
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)`;
+
+        function highlightSyntax(code) {
+            return code
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/\b(from|import|class|def|return|if|else|elif|for|while|try|except|with|as|in|not|and|or|is|None|True|False)\b/g, '<span class="syntax-keyword">$1</span>')
+                .replace(/\b(print|len|range|str|int|float|list|dict|set|tuple|open|read|write)\b/g, '<span class="syntax-function">$1</span>')
+                .replace(/(".*?"|'.*?')/g, '<span class="syntax-string">$1</span>')
+                .replace(/(#.*)/g, '<span class="syntax-comment">$1</span>')
+                .replace(/\b(\d+)\b/g, '<span class="syntax-number">$1</span>')
+                .replace(/(@\w+)/g, '<span class="syntax-decorator">$1</span>')
+                .replace(/\b([A-Z][a-zA-Z0-9_]*)\b/g, '<span class="syntax-class">$1</span>');
         }
 
-        // Sekme değiştirme
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.sidebar-content').forEach(content => content.classList.add('hidden'));
-            
-            event.target.classList.add('active');
-            document.getElementById(`${tabName}-content`).classList.remove('hidden');
-            
-            if (tabName === 'models') {
-                scanModels();
-            }
-        }
+        document.getElementById('codeContent').innerHTML = highlightSyntax(sampleCode);
 
-        // Dosya ağacını yükle
-        async function loadFileTree(path = '/workspace/airllm-studio') {
-            try {
-                const response = await fetch(`${API_BASE}/files/list`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({path: path})
-                });
-                
-                const items = await response.json();
-                
-                const container = document.getElementById('files-content');
-                container.innerHTML = '';
-                
-                // Geri butonu (kök dizin değilse)
-                if (path !== '/workspace/airllm-studio') {
-                    const backDiv = document.createElement('div');
-                    backDiv.className = 'file-tree-item';
-                    backDiv.innerHTML = `<span class="folder-icon">📁</span> ..`;
-                    backDiv.onclick = () => {
-                        const parentPath = path.substring(0, path.lastIndexOf('/'));
-                        loadFileTree(parentPath || '/workspace/airllm-studio');
-                    };
-                    container.appendChild(backDiv);
-                }
-                
-                items.forEach(item => {
-                    const div = document.createElement('div');
-                    div.className = 'file-tree-item';
-                    div.innerHTML = `
-                        <span class="${item.is_dir ? 'folder-icon' : 'file-icon'}">
-                            ${item.is_dir ? '📁' : '📄'}
-                        </span>
-                        ${item.name}
-                    `;
-                    div.onclick = () => {
-                        if (item.is_dir) {
-                            loadFileTree(item.path);
-                        } else {
-                            openFile(item);
-                        }
-                    };
-                    container.appendChild(div);
-                });
-            } catch (error) {
-                console.error('Dosya yükleme hatası:', error);
-                appendTerminal(`Hata: ${error.message}`, 'red');
-            }
-        }
-
-        // Dosya aç
-        async function openFile(file) {
-            if (!openFiles.find(f => f.path === file.path)) {
-                openFiles.push(file);
-                renderTabs();
-            }
-            selectTab(file.path);
+        async function sendChat() {
+            const input = document.getElementById('chatInput');
+            const messages = document.getElementById('chatMessages');
+            const question = input.value.trim();
             
-            // Dosya içeriğini yükle
-            try {
-                const response = await fetch(`${API_BASE}/files/read`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({path: file.path})
-                });
-                
-                const data = await response.json();
-                document.getElementById('code-editor').value = data.content || '';
-                currentFile = file;
-                appendTerminal(`📄 ${file.name} açıldı`);
-            } catch (error) {
-                console.error('Dosya okuma hatası:', error);
-                document.getElementById('code-editor').value = `// Hata: ${error.message}`;
-            }
-        }
-
-        // Sekmeleri render et
-        function renderTabs() {
-            const tabsContainer = document.getElementById('editor-tabs');
-            tabsContainer.innerHTML = '';
+            if (!question) return;
             
-            openFiles.forEach(file => {
-                const btn = document.createElement('button');
-                btn.className = `editor-tab ${currentFile && currentFile.path === file.path ? 'active' : ''}`;
-                btn.innerText = file.name;
-                btn.onclick = () => selectTab(file.path);
-                tabsContainer.appendChild(btn);
-            });
-        }
-
-        // Sekme seç
-        function selectTab(filePath) {
-            currentFile = openFiles.find(f => f.path === filePath);
-            renderTabs();
-            // Dosya içeriği zaten açık
-        }
-
-        // Dosya kaydet (Ctrl+S)
-        async function saveCurrentFile() {
-            if (!currentFile) {
-                appendTerminal('⚠️ Kaydedilecek dosya açık değil', 'orange');
-                return;
-            }
-            
-            const content = document.getElementById('code-editor').value;
-            
-            try {
-                const response = await fetch(`${API_BASE}/files/save`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        path: currentFile.path,
-                        content: content
-                    })
-                });
-                
-                const result = await response.json();
-                if (result.message) {
-                    appendTerminal(`✅ ${currentFile.name} kaydedildi (${result.size} bytes)`);
-                } else {
-                    appendTerminal(`❌ Hata: ${result.error}`, 'red');
-                }
-            } catch (error) {
-                appendTerminal(`❌ Kaydetme hatası: ${error.message}`, 'red');
-            }
-        }
-
-        // Keyboard shortcut (Ctrl+S)
-        document.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                e.preventDefault();
-                saveCurrentFile();
-            }
-        });
-
-        // Modelleri tara
-        async function scanModels() {
-            try {
-                const response = await fetch(`${API_BASE}/models/scan`);
-                const data = await response.json();
-                
-                const container = document.getElementById('model-list-container');
-                container.innerHTML = '';
-                
-                // Yerel modeller
-                data.local.forEach(model => {
-                    addModelItem(model, container);
-                });
-                
-                // Hazır HF modelleri
-                data.preset.forEach(model => {
-                    addModelItem(model, container);
-                });
-                
-                document.getElementById('model-status').innerText = `Toplam: ${data.total_found + data.preset.length} model`;
-            } catch (error) {
-                console.error('Model tarama hatası:', error);
-            }
-        }
-
-        function addModelItem(model, container) {
-            const div = document.createElement('div');
-            div.className = 'model-item';
-            
-            // Model tipi için badge belirle
-            let typeBadge = 'HUGGINGFACE';
-            let badgeClass = model.type || 'preset';
-            
-            if (model.is_local_file || model.category === 'local' || model.type === 'gguf' || model.type === 'pytorch' || model.type === 'onnx' || model.type === 'tensorflow') {
-                typeBadge = 'YEREL';
-                badgeClass = 'local';
-            }
-            
-            // Uzantı bilgisi varsa göster
-            let extInfo = model.extension ? ` • ${model.extension.toUpperCase()}` : '';
-            
-            div.innerHTML = `
-                <div class="model-name">${model.name}${extInfo}</div>
-                <div class="model-info">
-                    <span>${model.size || '--'}</span>
-                    <span class="badge ${badgeClass}">${typeBadge}</span>
-                </div>
-            `;
-            div.onclick = () => loadModel(model);
-            container.appendChild(div);
-        }
-
-        // Model yükle
-        async function loadModel(model) {
-            activeModel = model;
-            document.getElementById('model-status').innerText = `Model: ${model.name}`;
-            
-            addChatMessage('ai', `${model.name} modeli yükleniyor... Lütfen bekleyin.`);
-            
-            try {
-                const response = await fetch(`${API_BASE}/models/load`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        id: model.id,
-                        path: model.path || model.repo
-                    })
-                });
-                
-                const result = await response.json();
-                if (result.status === 'loading' || result.status === 'already_loaded') {
-                    addChatMessage('ai', '✅ Model başarıyla yüklendi! Artık sohbet edebilirsiniz.');
-                } else {
-                    addChatMessage('ai', '⚠️ Model yüklenirken bir sorun oluştu: ' + (result.message || result.error));
-                }
-            } catch (error) {
-                addChatMessage('ai', '❌ Bağlantı hatası: ' + error.message);
-            }
-        }
-
-        // Mesaj gönder
-        async function sendMessage() {
-            const input = document.getElementById('chat-input');
-            const message = input.value.trim();
-            
-            if (!message) return;
-            
-            addChatMessage('user', message);
+            messages.innerHTML += `<div class="chat-message user">${question.replace(/\n/g, '<br>')}</div>`;
             input.value = '';
+            messages.scrollTop = messages.scrollHeight;
             
-            // AI cevabı
+            messages.innerHTML += `<div class="chat-message ai" id="typingIndicator"><div class="typing-indicator"><span></span><span></span><span></span></div></div>`;
+            
             try {
-                const response = await fetch(`${API_BASE}/chat`, {
+                const response = await fetch('/api/chat', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        message: message,
-                        context: currentFile ? `Aktif dosya: ${currentFile.name}` : ''
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: question, code: sampleCode })
                 });
                 
                 const data = await response.json();
-                addChatMessage('ai', data.response || data.error);
+                document.getElementById('typingIndicator').remove();
+                messages.innerHTML += `<div class="chat-message ai">${data.response || 'Üzgünüm, şu anda yanıt veremiyorum.'}</div>`;
             } catch (error) {
-                addChatMessage('ai', 'Bağlantı hatası: ' + error.message);
+                document.getElementById('typingIndicator').remove();
+                messages.innerHTML += `<div class="chat-message ai">⚠️ Bağlantı hatası: ${error.message}</div>`;
             }
+            
+            messages.scrollTop = messages.scrollHeight;
         }
 
-        // Chat'e mesaj ekle
-        function addChatMessage(role, text) {
-            const container = document.getElementById('chat-container');
-            const div = document.createElement('div');
-            div.className = `message ${role}`;
-            div.innerText = text;
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
+        function clearChat() {
+            document.getElementById('chatMessages').innerHTML = `<div class="chat-message ai">💬 Sohbet temizlendi. Nasıl yardımcı olabilirim?</div>`;
         }
 
-        // Terminal komutu
-        function handleTerminalKey(event) {
-            if (event.key === 'Enter') {
-                const input = document.getElementById('terminal-input');
-                const command = input.value.trim();
-                
-                if (command) {
-                    appendTerminal(`> ${command}`);
-                    
-                    fetch(`${API_BASE}/terminal/run`, {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({command: command})
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.stdout) appendTerminal(data.stdout);
-                        if (data.stderr) appendTerminal(data.stderr, 'red');
-                        if (data.error) appendTerminal(data.error, 'red');
-                    })
-                    .catch(err => appendTerminal('Hata: ' + err.message, 'red'));
-                    
-                    input.value = '';
-                }
+        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendChat();
             }
-        }
+        });
 
-        function appendTerminal(text, color = '#33ff00') {
-            const output = document.getElementById('terminal-output');
-            const div = document.createElement('div');
-            div.style.color = color;
-            div.innerText = text;
-            output.insertBefore(div, output.lastElementChild);
-            output.scrollTop = output.scrollHeight;
-        }
-
-        // Sistem durumunu gerçek API'den çek
-        async function fetchSystemInfo() {
-            try {
-                const response = await fetch(`${API_BASE}/system/info`);
-                const info = await response.json();
-                
-                if (info.ram_percent) {
-                    document.getElementById('ram-status').innerText = `RAM: ${info.ram_percent}%`;
-                }
-                
-                if (info.model_loaded) {
-                    document.getElementById('model-status').innerText = `Model: ${info.model_loaded}`;
-                }
-            } catch (error) {
-                // Sessizce başarısız ol
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+                e.preventDefault();
+                const palette = document.getElementById('commandPalette');
+                palette.classList.toggle('show');
+                document.getElementById('commandInput').focus();
             }
-        }
+            if (e.key === 'Escape') {
+                document.getElementById('commandPalette').classList.remove('show');
+            }
+        });
 
-        // Her 5 saniyede bir sistem bilgilerini güncelle
-        setInterval(fetchSystemInfo, 5000);
+        document.querySelectorAll('.tree-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.tree-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+            });
+        });
+
+        const terminal = document.getElementById('terminalContent');
+        terminal.addEventListener('click', () => {
+            const command = prompt('Terminal komutu:');
+            if (command) {
+                terminal.innerHTML += `<div class="terminal-line"><span class="terminal-prompt">➜</span> ${command}</div><div class="terminal-line">Komut çalıştırıldı: ${command}</div>`;
+                terminal.scrollTop = terminal.scrollHeight;
+            }
+        });
+
+        console.log('🚀 AirLLM Studio başlatıldı!');
+        console.log('💡 İpuçları: Ctrl+Shift+P ile komut paletini açın');
     </script>
 </body>
 </html>

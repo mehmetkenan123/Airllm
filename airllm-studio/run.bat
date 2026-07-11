@@ -1,21 +1,30 @@
 @echo off
+chcp 65001 >nul
+title AirLLM Studio - Akıllı Kodlama Ortamı
 echo ========================================
-echo    AirLLM Studio - Baslatiliyor...
+echo   🚀 AirLLM Studio Başlatılıyor...
+echo   💻 Akıllı Kodlama Özellikleri Aktif
 echo ========================================
 echo.
 
-REM Gerekli Python paketlerini kontrol et ve yukle
-echo [+] Gerekli paketler kontrol ediliyor...
+REM Sanal ortam kontrolü
+if not exist "venv" (
+    echo [+] Sanal ortam oluşturuluyor...
+    python -m venv venv
+)
+
+REM Sanal ortamı aktif et
+call venv\Scripts\activate.bat
+
+REM Gereksinimleri yükle
+echo [+] Bağımlılıklar kontrol ediliyor...
 pip install -q flask flask-cors torch transformers accelerate airllm psutil huggingface_hub hf_transfer
 
 echo.
-echo [+] Yukleme tamamlandi! Uygulama baslatiliyor...
+echo [+] Uygulama başlatılıyor...
+echo [+] Tarayıcıda http://localhost:5000 adresini açın
 echo ========================================
 echo.
-echo Tarayiciyi manuel olarak acin: http://localhost:5000
-echo.
 
-REM Backend uygulamasini calistir
-python backend/app.py
-
+python backend\app.py
 pause
