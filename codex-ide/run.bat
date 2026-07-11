@@ -1,53 +1,46 @@
 @echo off
 chcp 65001 >nul
-title Codex IDE - Başlatılıyor...
+title Codex IDE v4.0 - Ultra Advanced Edition
 
-echo ============================================================
-echo    CODEX IDE - İnsanlık Tarihinin En Gelişmiş IDE'si
-echo ============================================================
+echo ==================================================
+echo   CODEX IDE v4.0 - ULTRA ADVANCED EDITION
+echo   Humanity's Most Advanced Development Environment
+echo ==================================================
 echo.
 
-REM Python'un kurulu olup olmadığını kontrol et
-where python >nul 2>nul
-if %ERRORLEVEL% neq 0 (
-    echo [HATA] Python bulunamadı!
-    echo Lütfen Python 3.11+ yükleyin: https://python.org
+cd /d "%~dp0"
+
+REM Check Python
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] Python not found! Please install Python 3.8+
     pause
     exit /b 1
 )
 
-echo [OK] Python bulundu
-python --version
-
-echo.
-echo [BİLGİ] Gerekli paketler kontrol ediliyor...
-
-REM Gerekli Python paketlerini yükle
-pip install flask flask-cors psutil --quiet 2>nul
-if %ERRORLEVEL% neq 0 (
-    echo [UYARI] Bazı paketler yüklenemedi, devam ediliyor...
-)
-
-echo [OK] Paketler hazır
-echo.
-echo ============================================================
-echo    Codex IDE Başlatılıyor...
-echo ============================================================
-echo.
-echo 🌐 Tarayıcıda açılacak: http://localhost:8080
-echo.
-echo ⌨️  Kısayollar:
-echo    Ctrl+Shift+P - Komut Paleti
-echo    Ctrl+P       - Hızlı Dosya Aç
-echo    Ctrl+B       - Sidebar Aç/Kapat
-echo    Ctrl+`       - Terminal Aç/Kapat
-echo    Ctrl+K       - AI Satır İçi
-echo    Escape       - Panelleri Kapat
-echo.
-echo ============================================================
+echo [OK] Python detected
 echo.
 
-REM Uygulamayı başlat
+REM Install dependencies if needed
+echo Checking dependencies...
+pip show flask >nul 2>&1 || pip install flask --quiet
+pip show psutil >nul 2>&1 || pip install psutil --quiet
+echo [OK] Dependencies ready
+echo.
+
+REM Create models directory
+if not exist "models" mkdir models
+echo [OK] Models directory ready
+echo.
+
+echo Starting Codex IDE v4.0...
+echo ==================================================
+echo.
+
 python main.py
 
-pause
+if errorlevel 1 (
+    echo.
+    echo [ERROR] Application crashed!
+    pause
+)
