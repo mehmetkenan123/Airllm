@@ -1,94 +1,90 @@
-# AirLLM Studio v1.3 - Yerel Yapay Zeka İstasyonu
+# AirLLM Studio v2.0 - Professional Edition
 
-![Version](https://img.shields.io/badge/version-1.3.0-blue)
-![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
-![Python](https://img.shields.io/badge/python-3.8%2B-green)
-![License](https://img.shields.io/badge/license-MIT-orange)
+**A professional, lightweight local LLM interface designed as a high-performance alternative to LM Studio.**
 
-## 🚀 Genel Bakış
+## 🚀 Features
 
-**AirLLM Studio**, düşük donanımlı bilgisayarlarda bile büyük dil modellerini (LLM) çalıştırmanızı sağlayan, LM Studio benzeri modern arayüze sahip, tamamen yerel bir yapay zeka istasyonudur. 
+- **Modern UI**: Three-panel layout (Model List, Chat Area, System Settings) inspired by VS Code and LM Studio
+- **Streaming Responses**: Real-time token generation display with smooth typing animation
+- **System Monitoring**: Live CPU, RAM, and estimated VRAM usage tracking
+- **Model Management**: Easy switching between popular models (Qwen, Llama 3, Phi-3, Mistral)
+- **Advanced Settings**: Adjustable GPU layers, temperature, and max tokens
+- **Live Logs**: Real-time operation logs for debugging and monitoring
+- **Dark Theme**: Professional VS Code / LM Studio inspired appearance
+- **Low Resource Usage**: Optimized backend for minimal overhead
 
-Gelişmiş **Katmanlı Yükleme (Layered Loading)** teknolojisi sayesinde, VRAM'i yetersiz olan ekran kartlarında veya sadece CPU kullanarak bile Llama 3, Qwen 2.5, Phi-3 gibi güçlü modelleri akıcı şekilde çalıştırabilirsiniz.
+## 📸 Interface Overview
 
-### ✨ Öne Çıkan Özellikler
+The application features a dark-themed, professional interface:
 
-*   🖥️ **Modern Web Arayüzü**: Karmaşık terminal komutlarına gerek yok. LM Studio tarzı, kullanıcı dostu, karanlık mod destekli grafik arayüz.
-*   ⚡ **Düşük RAM Optimizasyonu**: Modelleri parça parça (katman katman) yükleyerek sistem belleğini (RAM/VRAM) %70'e kadar daha verimli kullanır.
-*   🤖 **Çoklu Model Desteği**: HuggingFace üzerinden otomatik model indirme veya yerel `.gguf` modellerini yükleme imkanı.
-*   💬 **Gerçek Zamanlı Sohbet**: Streaming (akan) metin üretimi ile cevabı beklemek yerine yazarken okuyun.
-*   🔧 **Donanım İzleme**: Anlık GPU/CPU kullanımını ve bellek durumunu arayüzden takip edin.
-*   🔒 **Tamamen Gizli ve Yerel**: Verileriniz asla internete çıkmaz, tamamen kendi bilgisayarınızda işlenir.
+- **Left Sidebar**: List of available models with size and type info, plus chat history
+- **Center Panel**: Chat history with distinct user/AI message styling and welcome screen
+- **Right Panel**: Tabbed interface with:
+  - **Settings Tab**: GPU layers, temperature, max tokens sliders
+  - **System Tab**: Real-time RAM, CPU, and VRAM usage with visual bars
+  - **Logs Tab**: Live operation logs with timestamp and level indicators
 
----
+## 🛠️ Installation & Usage
 
-## 📦 Kurulum ve Çalıştırma (Tek Tıkla)
+### Prerequisites
 
-AirLLM Studio, karmaşık kurulum adımlarını ortadan kaldırmak için "Tek Dosya" mantığıyla tasarlanmıştır.
+- **Python 3.8+** installed and added to PATH
 
-### Gereksinimler
-*   Windows 10/11 İşletim Sistemi
-*   Python 3.8 veya üzeri yüklü olmalı ([Python İndir](https://www.python.org/downloads/))
-    *   *Kurulum sırasında "Add Python to PATH" seçeneğini işaretlemeyi unutmayın!*
+### Quick Start (Windows)
 
-### Nasıl Çalıştırılır?
+1. Download the project folder
+2. Double-click `run.bat`
+   - This script automatically installs dependencies (`flask`, `flask-cors`, `psutil`) if missing
+   - It launches the application and opens your default browser
 
-1.  Projeyi indirin veya klasöre çıkarın.
-2.  Klasör içindeki **`run.bat`** dosyasına çift tıklayın.
-3.  Sistem otomatik olarak:
-    *   Gerekli kütüphaneleri kontrol eder ve eksikleri kurar.
-    *   Arka plan servislerini başlatır.
-    *   Varsayılan tarayıcınızda AirLLM Studio arayüzünü açar.
+### Manual Start
 
-> **Not:** Siyah terminal pencereleri görebilirsiniz ancak bunlar arka planda çalışır ve işlem tamamlanınca kapanır. Asıl kullanım alanınız tarayıcıda açılan modern arayüzdür.
+```bash
+pip install flask flask-cors psutil
+python main.py
+```
 
----
+## ⚙️ API Endpoints
 
-## 🛠️ Teknik Detaylar
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Serves the single-page application |
+| `/api/models` | GET | Returns list of available models |
+| `/api/system` | GET | Returns current CPU/RAM usage stats |
+| `/api/logs` | GET | Returns live operation logs |
+| `/api/log` | POST | Add a new log entry |
+| `/api/chat` | POST | Streams chat completions based on prompt and settings |
 
-### Mimari
-AirLLM Studio, hafif bir Flask web sunucusu üzerinde çalışır ancak kullanıcıya masaüstü uygulaması deneyimi sunar.
+## 🎨 Key Features Explained
 
-*   **Backend**: Python (Flask, PyTorch, Transformers, AirLLM)
-*   **Frontend**: HTML5, CSS3, JavaScript (Vanilla JS + Chart.js)
-*   **AI Motoru**: HuggingFace Transformers & AirLLM (Quantization Support)
+### Streaming Chat
+Messages are displayed token-by-token as they are generated, providing immediate feedback and a natural conversation flow.
 
-### Performans İyileştirmeleri (v1.3)
-*   **GPU Offloading**: Desteklenen NVIDIA kartlarda katmanları otomatik olarak ekran kartına kaydırır.
-*   **Context Window Yönetimi**: Uzun sohbetlerde bellek taşmasını (OOM) önleyen dinamik temizleme mekanizması.
-*   **Streaming Response**: Token oluşturuldukça anlık iletim sağlar, bekleme süresini minimize eder.
+### System Monitoring
+- **RAM Usage**: Shows current memory utilization percentage
+- **CPU Usage**: Real-time processor load
+- **VRAM Estimate**: Calculated based on GPU layers setting
 
----
+### Model Configuration
+- **GPU Layers**: Control how many model layers are offloaded to GPU (0-100)
+- **Temperature**: Adjust response creativity (0.1 = focused, 2.0 = creative)
+- **Max Tokens**: Limit response length (128-4096)
 
-## 📸 Ekran Görüntüleri
+## 📝 Note
 
-Arayüz şu bölümlerden oluşur:
-1.  **Sol Panel**: Sohbet geçmişi ve yeni sohbet başlatma.
-2.  **Orta Panel**: Ana sohbet alanı, mesajlaşma ve model yanıtı.
-3.  **Sağ Panel**: Model ayarları (Temperature, Max Tokens), GPU/CPU kullanım grafikleri ve sistem durumu.
+This version uses a **simulated AI engine** for demonstration stability. In a production environment, the `AirLLMEngine` class in `main.py` would be replaced with actual `airllm` or `transformers` logic to load real GGUF/PyTorch models.
 
----
+To enable real AI inference:
+```bash
+pip install airllm torch transformers
+```
 
-## ❓ Sıkça Sorulan Sorular
+## 📄 License
 
-**S: Hangi modelleri kullanabilirim?**
-C: HuggingFace'te bulunan `.gguf` formatındaki çoğu modeli (Llama-3, Mistral, Gemma, Phi-3 vb.) kullanabilirsiniz. Uygulama içinden otomatik indirebilirsiniz.
-
-**S: Ekran kartım yok, çalışır mı?**
-C: Evet! AirLLM'in özel optimizasyonu sayesinde sadece işlemci (CPU) ve RAM kullanarak da modelleri çalıştırabilirsiniz, ancak yanıt süresi daha yavaş olabilir.
-
-**S: Verilerim güvenli mi?**
-C: Kesinlikle. Tüm işlemler yerel ağınızda (localhost) gerçekleşir. Hiçbir veri dışarı gönderilmez.
-
----
-
-## 📄 Lisans
-
-Bu proje MIT lisansı altında lisanslanmıştır.
-
-## 🤝 Katkıda Bulunun
-
-Hata bildirimleri ve özellik önerileri için proje deposu üzerinden bildirimde bulunabilirsiniz.
+MIT License
 
 ---
-**Geliştirici Notu**: Bu sürüm (v1.3), kararlılık ve kullanıcı deneyimi odaklı yeniden yapılandırılmıştır. Terminal bağımlılığı ortadan kaldırılmış, tam GUI deneyimi sunulmuştur.
+
+**Version**: 2.0 Professional Edition  
+**Language**: English (International)  
+**Platform**: Windows / Cross-platform
