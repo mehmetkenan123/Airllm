@@ -1,0 +1,79 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>AirLLM Studio</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1e1e2e; color: #fff; margin: 0; display: flex; height: 100vh; }
+        #sidebar { width: 250px; background: #252537; padding: 20px; border-right: 1px solid #333; }
+        #main { flex: 1; padding: 20px; display: flex; flex-direction: column; }
+        h1 { color: #89b4fa; }
+        .btn { background: #89b4fa; color: #1e1e2e; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; font-weight: bold; }
+        .btn:hover { background: #b4befe; }
+        #chat-box { flex: 1; background: #313244; border-radius: 10px; padding: 20px; overflow-y: auto; margin-bottom: 20px; }
+        .msg { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .user { background: #45475a; text-align: right; }
+        .ai { background: #585b70; }
+        #input-area { display: flex; gap: 10px; }
+        input { flex: 1; padding: 15px; border-radius: 5px; border: none; background: #313244; color: white; }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h2>AirLLM Studio</h2>
+        <p>Durum: <span id="status" style="color:#a6e3a1">Bağlanıyor...</span></p>
+        <button class="btn" onclick="location.reload()" style="width:100%; margin-top:20px;">Yenile</button>
+    </div>
+    <div id="main">
+        <h1>Hoşgeldiniz</h1>
+        <div id="chat-box">
+            <div class="msg ai">Merhaba! Ben AirLLM Asistanı. Nasıl yardımcı olabilirim?</div>
+        </div>
+        <div id="input-area">
+            <input type="text" id="user-input" placeholder="Sorunuzu yazın..." onkeypress="if(event.key==='Enter') send()">
+            <button class="btn" onclick="send()">Gönder</button>
+        </div>
+    </div>
+    <script>
+        async function checkStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                document.getElementById('status').innerText = data.status === 'online' ? 'Aktif (' + data.model + ')' : 'Kapalı';
+            } catch(e) { document.getElementById('status').innerText = 'Hata'; }
+        }
+        async function send() {
+            const input = document.getElementById('user-input');
+            const box = document.getElementById('chat-box');
+            const txt = input.value;
+            if(!txt) return;
+            
+            box.innerHTML += `<div class="msg user">${txt}</div>`;
+            input.value = '';
+            box.scrollTop = box.scrollHeight;
+            
+            const res = await fetch('/api/chat', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({prompt: txt})
+            });
+            
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            box.innerHTML += `<div class="msg ai" id="ai-res"></div>`;
+            const aiDiv = document.getElementById('ai-res');
+            
+            while(true) {
+                const {done, value} = await reader.read();
+                if(done) break;
+                const chunk = decoder.decode(value);
+                aiDiv.innerText += chunk;
+                box.scrollTop = box.scrollHeight;
+            }
+        }
+        setInterval(checkStatus, 2000);
+        checkStatus();
+    </script>
+</body>
+</html>
+    
