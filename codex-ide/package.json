@@ -1,0 +1,41 @@
+{
+  "name": "codex-ide",
+  "version": "1.0.0",
+  "private": true,
+  "description": "İnsanlık tarihinin en gelişmiş geliştirme ortamı",
+  "author": "Codex Team",
+  "license": "MIT",
+  "keywords": ["ide", "ai", "code-editor", "electron", "react", "typescript"],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "prepare": "lefthook install"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.8.3",
+    "@playwright/test": "^1.45.0",
+    "@types/node": "^20.14.10",
+    "electron": "^28.3.0",
+    "electron-builder": "^24.13.3",
+    "lefthook": "^1.6.18",
+    "turbo": "^2.0.9",
+    "typescript": "^5.5.3",
+    "vite": "^5.3.3",
+    "vitest": "^2.0.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.5.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}
