@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AirLLM Studio - Yerel LLM Uygulaması</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 1400px;
+            height: 95vh;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: flex;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: #1a1a2e;
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 10px;
+            background: #16213e;
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .nav-tab.active {
+            background: #e94560;
+        }
+
+        .nav-tab:hover:not(.active) {
+            background: #0f3460;
+        }
+
+        .new-chat-btn {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .new-chat-btn:hover {
+            background: #ff6b6b;
+        }
+
+        .conversation-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .conversation-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #16213e;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .conversation-item:hover {
+            background: #0f3460;
+        }
+
+        .conversation-item.active {
+            background: #e94560;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .model-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 15px;
+            background: #e94560;
+            color: white;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+
+        .system-status {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #27ae60;
+        }
+
+        .status-dot.loading {
+            background: #f39c12;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .chat-area {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message.user {
+            align-items: flex-end;
+        }
+
+        .message.assistant {
+            align-items: flex-start;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 18px;
+            border-radius: 18px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .message.user .message-content {
+            background: #3498db;
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.assistant .message-content {
+            background: white;
+            color: #2c3e50;
+            border-bottom-left-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .input-area {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .file-upload {
+            margin-bottom: 10px;
+        }
+
+        .file-input-wrapper {
+            display: inline-block;
+            position: relative;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #95a5a6;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .file-input-label:hover {
+            background: #7f8c8d;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+        }
+
+        #messageInput {
+            flex: 1;
+            padding: 12px 18px;
+            border: 2px solid #dee2e6;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        #messageInput:focus {
+            border-color: #3498db;
+        }
+
+        #sendBtn {
+            padding: 12px 30px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #sendBtn:hover {
+            background: #2980b9;
+        }
+
+        #sendBtn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .file-list {
+            margin-top: 10px;
+            padding: 10px;
+            background: #ecf0f1;
+            border-radius: 5px;
+        }
+
+        .file-item {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #3498db;
+            color: white;
+            border-radius: 15px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+
+        /* Models Panel */
+        .models-panel {
+            display: none;
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .models-panel.active {
+            display: block;
+        }
+
+        .model-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .model-card:hover {
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .model-card.selected {
+            border-color: #e94560;
+            background: #fff5f5;
+        }
+
+        .model-card.loaded {
+            border-color: #27ae60;
+            background: #f0fff4;
+        }
+
+        .model-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .model-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .model-size {
+            padding: 4px 12px;
+            background: #3498db;
+            color: white;
+            border-radius: 15px;
+            font-size: 12px;
+        }
+
+        .model-description {
+            color: #7f8c8d;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .model-recommended {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #27ae60;
+            color: white;
+            border-radius: 15px;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+
+        .model-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #e94560;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #ff6b6b;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #2ecc71;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .progress-container {
+            margin-top: 15px;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #ecf0f1;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e94560, #ff6b6b);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .progress-text {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #7f8c8d;
+        }
+
+        .chat-panel {
+            display: block;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-panel.hidden {
+            display: none;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #e94560;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h2>🤖 AirLLM Studio</h2>
+            
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="switchTab('chat')">💬 Sohbet</button>
+                <button class="nav-tab" onclick="switchTab('models')">🧠 Modeller</button>
+            </div>
+
+            <button class="new-chat-btn" onclick="newConversation()">
+                <span>➕</span> Yeni Sohbet
+            </button>
+
+            <div class="conversation-list" id="conversationList">
+                <!-- Konuşmalar buraya gelecek -->
+            </div>
+
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #16213e;">
+                <div class="status-item">
+                    <div class="status-dot" id="systemDot"></div>
+                    <span id="systemStatus">Sistem hazır</span>
+                </div>
+                <div style="margin-top: 10px; font-size: 11px; color: #888;">
+                    <div id="ramInfo">RAM: --</div>
+                    <div id="gpuInfo">GPU: --</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Chat Panel -->
+            <div class="chat-panel" id="chatPanel">
+                <div class="chat-header">
+                    <h3 id="currentConversation">Yeni Sohbet</h3>
+                    <div style="display: flex; gap: 15px; align-items: center;">
+                        <div class="system-status">
+                            <div class="status-item">
+                                <div class="status-dot" id="modelDot"></div>
+                                <span id="modelStatus">Model yok</span>
+                            </div>
+                        </div>
+                        <div class="model-info" id="modelInfo" style="display: none;">
+                            <span>🧠</span>
+                            <span id="modelName">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-area" id="chatArea">
+                    <!-- Mesajlar buraya gelecek -->
+                </div>
+
+                <div class="input-area">
+                    <div class="file-upload">
+                        <div class="file-input-wrapper">
+                            <label for="fileInput" class="file-input-label">📎 Dosya Ekle</label>
+                            <input type="file" id="fileInput" multiple onchange="handleFileSelect(event)">
+                        </div>
+                        <span id="fileCount"></span>
+                    </div>
+                    <div class="file-list" id="fileList"></div>
+                    <div class="input-wrapper">
+                        <input type="text" id="messageInput" placeholder="Mesajınızı yazın..." onkeypress="handleKeyPress(event)" disabled>
+                        <button id="sendBtn" onclick="sendMessage()" disabled>Gönder</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Models Panel -->
+            <div class="models-panel" id="modelsPanel">
+                <h2 style="margin-bottom: 20px; color: #2c3e50;">🧠 Kullanılabilir Modeller</h2>
+                <p style="color: #7f8c8d; margin-bottom: 20px;">
+                    Bir model seçip "İndir ve Yükle" butonuna tıklayın. Model otomatik olarak HuggingFace'den indirilecek ve yüklenecektir.
+                </p>
+                <div id="modelsList">
+                    <!-- Modeller buraya yüklenecek -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        let currentConversationId = null;
+        let selectedFiles = [];
+        let currentTab = 'chat';
+        let availableModels = [];
+        let currentModel = null;
+        let isModelLoading = false;
+
+        // Sayfa yüklendiğinde
+        document.addEventListener('DOMContentLoaded', function() {
+            loadModels();
+            loadSystemInfo();
+            setInterval(loadSystemInfo, 5000);
+            newConversation();
+        });
+
+        async function loadModels() {
+            try {
+                const response = await fetch(`${API_BASE}/models`);
+                const data = await response.json();
+                availableModels = data.models;
+                currentModel = data.current_model;
+                isModelLoading = data.loading;
+                
+                updateModelStatus(data.model_loaded, data.current_model, data.loading);
+                renderModelsList();
+                
+                // Input'u aktif et
+                const inputDisabled = !data.model_loaded;
+                document.getElementById('messageInput').disabled = inputDisabled;
+                document.getElementById('sendBtn').disabled = inputDisabled;
+                
+            } catch (error) {
+                console.error('Modeller yüklenemedi:', error);
+            }
+        }
+
+        async function loadSystemInfo() {
+            try {
+                const response = await fetch(`${API_BASE}/system/info`);
+                const data = await response.json();
+                
+                document.getElementById('ramInfo').textContent = `RAM: ${data.ram_available} / ${data.ram_total}`;
+                document.getElementById('gpuInfo').textContent = data.gpu !== 'Yok' ? 
+                    `GPU: ${data.gpu.name}` : 'GPU: Yok (CPU modu)';
+                
+                const dot = document.getElementById('systemDot');
+                dot.style.background = data.cuda_available ? '#27ae60' : '#f39c12';
+                
+            } catch (error) {
+                console.error('Sistem bilgisi alınamadı:', error);
+            }
+        }
+
+        function updateModelStatus(loaded, modelName, loading) {
+            const dot = document.getElementById('modelDot');
+            const statusText = document.getElementById('modelStatus');
+            const modelInfo = document.getElementById('modelInfo');
+            const modelNameEl = document.getElementById('modelName');
+            
+            if (loading) {
+                dot.className = 'status-dot loading';
+                statusText.textContent = 'Model yükleniyor...';
+                modelInfo.style.display = 'none';
+            } else if (loaded) {
+                dot.className = 'status-dot';
+                dot.style.background = '#27ae60';
+                statusText.textContent = 'Model hazır';
+                modelInfo.style.display = 'flex';
+                modelNameEl.textContent = modelName.split('/').pop();
+            } else {
+                dot.className = 'status-dot';
+                dot.style.background = '#e74c3c';
+                statusText.textContent = 'Model yok';
+                modelInfo.style.display = 'none';
+            }
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.getElementById('chatPanel').classList.toggle('hidden', tab !== 'chat');
+            document.getElementById('modelsPanel').classList.toggle('active', tab === 'models');
+            
+            if (tab === 'models') {
+                renderModelsList();
+            }
+        }
+
+        function renderModelsList() {
+            const container = document.getElementById('modelsList');
+            
+            if (availableModels.length === 0) {
+                container.innerHTML = '<p>Modeller yükleniyor...</p>';
+                return;
+            }
+            
+            container.innerHTML = availableModels.map(model => {
+                const isSelected = currentModel === model.path;
+                const isRecommended = model.recommended;
+                
+                return `
+                    <div class="model-card ${isSelected ? 'selected loaded' : ''}" id="model-${model.id}">
+                        <div class="model-header">
+                            <div class="model-name">${model.name}</div>
+                            <div class="model-size">${model.size}</div>
+                        </div>
+                        ${isRecommended ? '<div class="model-recommended">✓ Önerilen</div>' : ''}
+                        <div class="model-description">${model.description}</div>
+                        <div class="model-actions">
+                            ${isSelected ? 
+                                `<button class="btn btn-success" disabled>✓ Yüklü</button>
+                                 <button class="btn btn-secondary" onclick="unloadModel()">Boşalt</button>` :
+                                `<button class="btn btn-primary" onclick="downloadModel('${model.path}')" ${isModelLoading ? 'disabled' : ''}>
+                                    ${isModelLoading ? '<span class="loading-spinner"></span>' : '⬇'} İndir ve Yükle
+                                </button>`
+                            }
+                        </div>
+                        <div class="progress-container" id="progress-${model.id}">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progress-fill-${model.id}"></div>
+                            </div>
+                            <div class="progress-text" id="progress-text-${model.id}"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function downloadModel(modelPath) {
+            try {
+                const response = await fetch(`${API_BASE}/models/download`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ model_path: modelPath })
+                });
+                
+                const data = await response.json();
+                
+                if (data.progress_id) {
+                    // Progress'i göster
+                    const progressContainer = document.getElementById(`progress-${modelPath.split('/').pop()}`);
+                    if (progressContainer) {
+                        progressContainer.style.display = 'block';
+                    }
+                    
+                    // Progress'i poll et
+                    const pollInterval = setInterval(async () => {
+                        const progressResponse = await fetch(`${API_BASE}/models/progress/${data.progress_id}`);
+                        const progressData = await response.json();
+                        
+                        const fill = document.getElementById(`progress-fill-${modelPath.split('/').pop()}`);
+                        const text = document.getElementById(`progress-text-${modelPath.split('/').pop()}`);
+                        
+                        if (fill && text) {
+                            fill.style.width = `${progressData.progress}%`;
+                            text.textContent = progressData.message;
+                        }
+                        
+                        if (progressData.status === 'ready' || progressData.status === 'error') {
+                            clearInterval(pollInterval);
+                            setTimeout(() => {
+                                loadModels();
+                            }, 1000);
+                        }
+                    }, 1000);
+                }
+                
+            } catch (error) {
+                alert('Model indirme hatası: ' + error.message);
+            }
+        }
+
+        async function unloadModel() {
+            if (!confirm('Model bellekten boşaltılsın mı?')) return;
+            
+            try {
+                await fetch(`${API_BASE}/models/unload`, { method: 'POST' });
+                loadModels();
+            } catch (error) {
+                alert('Model boşaltma hatası: ' + error.message);
+            }
+        }
+
+        function newConversation() {
+            currentConversationId = 'conv_' + Date.now();
+            document.getElementById('currentConversation').textContent = 'Yeni Sohbet';
+            document.getElementById('chatArea').innerHTML = '';
+            selectedFiles = [];
+            updateFileList();
+            
+            addMessage('assistant', 'Merhaba! AirLLM Studio\'ya hoş geldiniz. Sol menüden bir model yükleyin ve sohbet etmeye başlayın! 🚀');
+        }
+
+        function addMessage(role, content) {
+            const chatArea = document.getElementById('chatArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            messageDiv.innerHTML = `
+                <div class="message-content">${content}</div>
+            `;
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            selectedFiles = [...selectedFiles, ...files];
+            updateFileList();
+        }
+
+        function updateFileList() {
+            const fileList = document.getElementById('fileList');
+            const fileCount = document.getElementById('fileCount');
+            
+            if (selectedFiles.length === 0) {
+                fileList.innerHTML = '';
+                fileCount.textContent = '';
+                return;
+            }
+
+            fileCount.textContent = `${selectedFiles.length} dosya seçildi`;
+            fileList.innerHTML = selectedFiles.map(file => 
+                `<span class="file-item">📄 ${file.name}</span>`
+            ).join('');
+        }
+
+        async function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+
+            if (!message && selectedFiles.length === 0) return;
+
+            if (message) {
+                addMessage('user', message);
+            }
+
+            if (selectedFiles.length > 0) {
+                await uploadFiles();
+            }
+
+            messageInput.value = '';
+            messageInput.disabled = true;
+            document.getElementById('sendBtn').disabled = true;
+            document.getElementById('sendBtn').innerHTML = '<span class="loading-spinner"></span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        conversation_id: currentConversationId
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    addMessage('assistant', `⚠️ ${data.response || data.error}`);
+                } else {
+                    addMessage('assistant', data.response);
+                }
+            } catch (error) {
+                addMessage('assistant', 'Bağlantı hatası: Backend sunucusuna bağlanılamadı.');
+            } finally {
+                messageInput.disabled = false;
+                document.getElementById('sendBtn').disabled = false;
+                document.getElementById('sendBtn').textContent = 'Gönder';
+                messageInput.focus();
+            }
+        }
+
+        async function uploadFiles() {
+            for (const file of selectedFiles) {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('conversation_id', currentConversationId);
+
+                try {
+                    await fetch(`${API_BASE}/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                } catch (error) {
+                    console.error('Dosya yükleme hatası:', error);
+                }
+            }
+            selectedFiles = [];
+            updateFileList();
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+    </script>
+</body>
+</html>
