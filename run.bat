@@ -117,15 +117,16 @@ echo   Adim 3/3: Uygulama Baslatiliyor
 echo ========================================
 echo.
 
-if exist "app.py" (
-    echo Streamlit uygulaması başlatılıyor...
-    streamlit run app.py
+if exist "airllm-studio\backend\app.py" (
+    echo AirLLM Studio Flask uygulaması başlatılıyor...
+    cd airllm-studio\backend
+    python app.py
 ) else if exist "airllm-studio\main.py" (
     echo Ana uygulama başlatılıyor...
     python airllm-studio\main.py
 ) else (
-    echo UYARI: app.py veya main.py bulunamadi!
-    echo Manuel olarak baslatin: python app.py
+    echo UYARI: backend/app.py veya main.py bulunamadi!
+    echo Manuel olarak baslatin: python airllm-studio\backend\app.py
 )
 
 pause
