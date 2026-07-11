@@ -549,8 +549,24 @@ def get_all_models():
     # Yerel modelleri başa ekle
     return local_models + AVAILABLE_MODELS
 
-app = Flask(__name__)
+# Flask uygulaması - Frontend dosyalarını doğru şekilde sun
+app = Flask(__name__, 
+            static_folder=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend'),
+            static_url_path='',
+            template_folder=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend'))
 CORS(app)
+
+@app.route('/')
+def index():
+    """Ana sayfa - frontend'i sun"""
+    from flask import send_from_directory
+    return send_from_directory(app.static_folder, 'index.html')
+
+@app.errorhandler(404)
+def not_found(e):
+    """404 hatalarını ana sayfaya yönlendir"""
+    from flask import send_from_directory
+    return send_from_directory(app.static_folder, 'index.html')
 
 # Global model instance
 model_instance = None
