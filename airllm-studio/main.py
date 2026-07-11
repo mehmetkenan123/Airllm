@@ -1,322 +1,314 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AirLLM Studio v1.2.0 - Performans Optimizasyonlu Surum
-Ozellikler:
-- Katmanli Yukleme (Layer-by-Layer) ile Dusuk VRAM Kullanimi
-- Dinamik GPU Offloading ve Q4_K_M Destegi
-- NVMe I/O Optimizasyonu ve Dusuk Gecikme
-- Otomatik Baglam Penceresi Yonetimi (OOM Korumasi)
-- Performans Modu (Arka plan sureclerini kisitla)
+AirLLM Studio v1.3.0 - LM Studio Tarzı Modern Arayüz
+Tek Dosya Çözümü: Backend + AI Engine + Frontend
 """
 
 import os
 import sys
 import time
-import threading
 import socket
-try:
-    import psutil
-except ImportError:
-    print("HATA: psutil kutuphanesi yuklu degil. Lutfen 'pip install psutil' calistirin.")
-    sys.exit(1)
-    
-try:
-    from flask import Flask, request, jsonify, Response
-    from flask_cors import CORS
-except ImportError:
-    print("HATA: Flask veya flask_cors kutuphanesi yuklu degil. Lutfen 'pip install flask flask-cors' calistirin.")
-    sys.exit(1)
+import threading
+import webbrowser
+import json
+import psutil
+from flask import Flask, render_template_string, request, jsonify, Response, stream_with_context
 
-# --- Yapay Zeka Motoru Simulasyonu (Gercek Entegrasyon Icin Hazir) ---
-class OptimizedLLMEngine:
-    def __init__(self):
-        self.model = None
-        self.current_layer = 0
-        self.total_layers = 0
-        self.is_loaded = False
-        self.performance_mode = True
-        
-    def get_system_info(self):
-        """Donanim bilgilerini ve VRAM/RAM durumunu analiz et."""
-        ram = psutil.virtual_memory()
-        gpu_info = "Entegre GPU veya Tespit Edilemedi"
-        try:
-            import subprocess
-            result = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total', '--format=csv,noheader'], 
-                                    capture_output=True, text=True, timeout=5)
-            if result.returncode == 0:
-                gpu_info = result.stdout.strip().replace('\n', ' | ')
-        except:
-            pass
-            
-        return {
-            "ram_total": f"{ram.total / (1024**3):.2f} GB",
-            "ram_available": f"{ram.available / (1024**3):.2f} GB",
-            "gpu_info": gpu_info,
-            "cpu_count": psutil.cpu_count(logical=False),
-            "performance_mode": self.performance_mode
-        }
+# --- YAPAY ZEKA MOTORU (Simülasyon + Gerçek Entegrasyon Hazır) ---
+try:
+    from airllm import AutoModel
+    AIRLLM_AVAILABLE = True
+except ImportError:
+    AIRLLM_AVAILABLE = False
 
-    def load_model(self, model_name, quantization="Q4_K_M", gpu_layers=-1):
-        """Modeli katmanli olarak yukler. v1.2.0: OOM korumali."""
-        print(f"[Motor] Model yukleniyor: {model_name} ({quantization})...")
-        self.total_layers = 32
-        if gpu_layers == -1:
-            available_vram = 6.0
-            self.current_layer = int((available_vram / 0.5) * 0.9)
-        else:
-            self.current_layer = min(gpu_layers, self.total_layers)
-            
-        print(f"[Optimizasyon] {self.current_layer}/{self.total_layers} katman GPU'ya yuklendi.")
-        print(f"[Optimizasyon] Kalan katmanlar NVMe uzerinden stream edilecek.")
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+
+model = None
+current_model_name = None
+
+def load_model_engine(model_name, gpu_layers=20):
+    global model, current_model_name
+    if not AIRLLM_AVAILABLE:
         time.sleep(1)
-        self.is_loaded = True
+        current_model_name = model_name
         return True
+    try:
+        model = AutoModel.from_pretrained(model_name, max_memory_allocated="4GB")
+        current_model_name = model_name
+        return True
+    except Exception as e:
+        print(f"Model hatası: {e}")
+        return False
 
-    def generate_stream(self, prompt, max_tokens=256, context_window=4096):
-        """Akis yanit uretici. v1.2.0: Dusuk gecikmeli I/O."""
-        if not self.is_loaded:
-            yield "HATA: Model henuz yuklenmedi."
-            return
-
-        if len(prompt) > context_window:
-            prompt = prompt[-context_window:]
-            yield "[Sistem] Baglam penceresi asildi, giris kisaltilmis (OOM Korumasi).\n\n"
-
-        words = ["AirLLM", "Studio", "v1.2.0", "yaniti:", 
-                 "Katmanli", "yukleme", "aktif.", "GPU", "offloading", "optimize.", 
-                 "Token", "hizi", "%25", "artirildi.", "Keyifli", "kullanimlar!"]
-        
+def generate_response_stream(prompt, max_tokens=512, temperature=0.7):
+    if not AIRLLM_AVAILABLE or model is None:
+        # Simülasyon Modu
+        response_text = f"AirLLM Studio v1.3 ile yanıtlanıyor. Model: {current_model_name or 'Hazır'}.\n\nKullanıcı: {prompt}\n\nBu bir simülasyon yanıtıdır. Gerçek model yüklenmediğinde bu mesaj görünür. Gerçek kullanım için 'pip install airllm torch transformers' komutunu çalıştırın."
+        words = response_text.split()
         for word in words:
-            yield word + " "
+            yield f"data: {json.dumps({'token': word + ' '})}\n\n"
             time.sleep(0.05)
+        yield "data: [DONE]\n\n"
+        return
 
-# --- Web Sunucusu ve API ---
+    # Gerçek Inferans
+    try:
+        input_data = {'input': prompt}
+        generation = model.generate(input_data, max_new_tokens=max_tokens, do_sample=True, temperature=temperature)
+        full_text = generation[0] if isinstance(generation, list) else str(generation)
+        tokens = full_text.split()
+        for token in tokens:
+            yield f"data: {json.dumps({'token': token + ' '})}\n\n"
+            time.sleep(0.03)
+        yield "data: [DONE]\n\n"
+    except Exception as e:
+        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        yield "data: [DONE]\n\n"
+
+# --- FLASK UYGULAMASI ---
 app = Flask(__name__)
-CORS(app)
-engine = OptimizedLLMEngine()
 
-@app.route('/api/status')
-def status():
-    return jsonify(engine.get_system_info())
-
-@app.route('/api/models', methods=['GET'])
-def list_models():
-    models = [
-        {"id": "qwen2.5-7b-instruct-q4_k_m", "name": "Qwen 2.5 7B (Q4_K_M)", "size": "4.2 GB"},
-        {"id": "llama3-8b-instruct-q4_k_m", "name": "Llama 3 8B (Q4_K_M)", "size": "4.9 GB"},
-        {"id": "phi-3-mini-4k-instruct", "name": "Phi-3 Mini", "size": "2.3 GB"}
-    ]
-    return jsonify(models)
-
-@app.route('/api/chat', methods=['POST'])
-def chat():
-    data = request.json
-    prompt = data.get('prompt', '')
-    model = data.get('model', 'default')
-    
-    if not engine.is_loaded:
-        engine.load_model(model)
-        
-    def generate():
-        for token in engine.generate_stream(prompt):
-            yield f"data: {token}\n\n"
-            
-    return Response(generate(), mimetype='text/event-stream')
-
-@app.route('/api/load', methods=['POST'])
-def load_model_api():
-    data = request.json
-    model = data.get('model', 'qwen2.5-7b-instruct-q4_k_m')
-    gpu_layers = data.get('gpu_layers', -1)
-    success = engine.load_model(model, gpu_layers=gpu_layers)
-    return jsonify({"status": "success" if success else "failed"})
-
-# --- Arayüz (HTML/CSS/JS Tek Dosyada) ---
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AirLLM Studio v1.2.0</title>
+    <title>AirLLM Studio v1.3</title>
     <style>
-        :root { --bg: #0f172a; --card: #1e293b; --text: #e2e8f0; --accent: #3b82f6; --success: #10b981; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
-        .container { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 20px; }
-        header { text-align: center; margin-bottom: 10px; }
-        h1 { margin: 0; font-size: 2rem; color: var(--accent); }
-        .badge { background: var(--success); color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
-        .card { background: var(--card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .stat-item { text-align: center; }
-        .stat-val { font-size: 1.2rem; font-weight: bold; color: var(--accent); }
-        .stat-label { font-size: 0.85rem; opacity: 0.7; }
-        textarea { width: 100%; height: 100px; background: #0f172a; border: 1px solid #334155; color: white; padding: 15px; border-radius: 8px; resize: vertical; font-family: monospace; box-sizing: border-box; }
-        button { background: var(--accent); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        button:hover { filter: brightness(1.1); }
-        button:disabled { background: #475569; cursor: not-allowed; }
-        #output { white-space: pre-wrap; line-height: 1.6; min-height: 80px; }
-        .log-line { font-family: monospace; font-size: 0.85rem; border-bottom: 1px solid #334155; padding: 4px 0; }
-        select { padding: 10px; background: #0f172a; color: white; border: 1px solid #334155; border-radius: 8px; }
+        :root { --bg-dark: #1e1e1e; --bg-panel: #252526; --bg-input: #3c3c3c; --text-main: #cccccc; --text-highlight: #ffffff; --accent: #007fd4; --border: #3e3e42; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-main); height: 100vh; display: flex; overflow: hidden; }
+        .sidebar { width: 260px; background-color: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .sidebar-header { padding: 15px; font-weight: bold; color: var(--text-highlight); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .new-chat-btn { background: var(--accent); border: none; color: white; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
+        .history-list { flex: 1; overflow-y: auto; list-style: none; padding: 10px; }
+        .history-item { padding: 10px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .history-item:hover { background-color: #37373d; }
+        .main-content { flex: 1; display: flex; flex-direction: column; }
+        .top-bar { height: 50px; background-color: var(--bg-panel); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; justify-content: space-between; }
+        .model-selector { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border); padding: 5px 10px; border-radius: 4px; outline: none; }
+        .status-indicator { font-size: 12px; color: #4ec9b0; }
+        .chat-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+        .message { display: flex; gap: 15px; max-width: 800px; margin: 0 auto; width: 100%; line-height: 1.6; }
+        .avatar { width: 30px; height: 30px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; flex-shrink: 0; }
+        .avatar.user { background-color: var(--accent); color: white; }
+        .avatar.ai { background-color: #4ec9b0; color: #1e1e1e; }
+        .message-content { padding-top: 2px; white-space: pre-wrap; word-wrap: break-word; }
+        .input-area { background-color: var(--bg-panel); padding: 20px; border-top: 1px solid var(--border); }
+        .input-wrapper { max-width: 800px; margin: 0 auto; position: relative; display: flex; gap: 10px; }
+        textarea { flex: 1; background-color: var(--bg-input); border: 1px solid var(--border); color: var(--text-main); padding: 12px; border-radius: 6px; resize: none; height: 50px; outline: none; }
+        textarea:focus { border-color: var(--accent); }
+        .send-btn { background-color: var(--accent); color: white; border: none; padding: 0 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .send-btn:disabled { background-color: #555; cursor: not-allowed; }
+        .settings-panel { width: 280px; background-color: var(--bg-panel); border-left: 1px solid var(--border); padding: 15px; overflow-y: auto; }
+        .settings-title { font-weight: bold; margin-bottom: 15px; color: var(--text-highlight); border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .setting-group { margin-bottom: 20px; }
+        .setting-label { display: block; font-size: 12px; margin-bottom: 5px; color: #aaaaaa; }
+        .setting-input { width: 100%; background: var(--bg-input); border: 1px solid var(--border); color: white; padding: 5px; border-radius: 4px; }
+        .range-slider { width: 100%; accent-color: var(--accent); }
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 5px; }
+        .typing-indicator span { display: inline-block; width: 6px; height: 6px; background-color: #aaa; border-radius: 50%; animation: typing 1s infinite; margin: 0 2px; }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typing { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>AirLLM Studio <span class="badge">v1.2.0</span></h1>
-            <p>Katmanlı Yükleme • Düşük Gecikme • GPU Optimize</p>
-        </header>
-
-        <div class="card">
-            <h3>🖥️ Sistem Durumu</h3>
-            <div class="stats" id="stats">
-                <div class="stat-item"><div class="stat-val">Yükleniyor...</div><div class="stat-label">RAM</div></div>
-                <div class="stat-item"><div class="stat-val">-</div><div class="stat-label">GPU</div></div>
-                <div class="stat-item"><div class="stat-val">Aktif</div><div class="stat-label">Performans Modu</div></div>
+    <div class="sidebar">
+        <div class="sidebar-header"><span>AirLLM Studio</span><button class="new-chat-btn" onclick="startNewChat()">+ Yeni</button></div>
+        <ul class="history-list" id="historyList"><li class="history-item active">Yeni Sohbet</li></ul>
+    </div>
+    <div class="main-content">
+        <div class="top-bar">
+            <select class="model-selector" id="modelSelect" onchange="changeModel()"><option value="loading">Modeller yükleniyor...</option></select>
+            <span class="status-indicator" id="statusIndicator">● Hazır</span>
+        </div>
+        <div class="chat-container" id="chatContainer">
+            <div class="message ai-message"><div class="avatar ai">AI</div><div class="message-content">Merhaba! AirLLM Studio v1.3'e hoşgeldiniz.</div></div>
+        </div>
+        <div class="input-area">
+            <div class="input-wrapper">
+                <textarea id="userInput" placeholder="Mesajınızı yazın..." onkeydown="handleKeyDown(event)"></textarea>
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()">Gönder</button>
             </div>
-        </div>
-
-        <div class="card">
-            <h3>💬 Sohbet</h3>
-            <textarea id="promptInput" placeholder="Modelinize soru sorun..."></textarea>
-            <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <select id="modelSelect" style="flex:1; min-width: 200px;">
-                    <option value="qwen2.5-7b-instruct-q4_k_m">Qwen 2.5 7B (Q4_K_M)</option>
-                    <option value="llama3-8b-instruct-q4_k_m">Llama 3 8B (Q4_K_M)</option>
-                </select>
-                <button onclick="loadModel()" id="loadBtn">Yükle</button>
-                <button onclick="sendMessage()" id="sendBtn">Gönder</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <h3>📤 Yanıt</h3>
-            <div id="output"></div>
-        </div>
-        
-        <div class="card">
-            <h3>📝 Log</h3>
-            <div id="logs" style="max-height: 120px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; color: #94a3b8;"></div>
         </div>
     </div>
-
+    <div class="settings-panel">
+        <div class="settings-title">Ayarlar</div>
+        <div class="setting-group">
+            <label class="setting-label">GPU Katmanları</label>
+            <input type="range" class="range-slider" id="gpuLayers" min="0" max="100" value="50" oninput="updateVal('gpuVal', this.value)">
+            <div style="text-align: right; font-size: 11px; color: #888;"><span id="gpuVal">50</span></div>
+        </div>
+        <div class="setting-group">
+            <label class="setting-label">Temperature</label>
+            <input type="range" class="range-slider" id="temperature" min="0.1" max="1.5" step="0.1" value="0.7" oninput="updateVal('tempVal', this.value)">
+            <div style="text-align: right; font-size: 11px; color: #888;"><span id="tempVal">0.7</span></div>
+        </div>
+        <div class="setting-group">
+            <label class="setting-label">Sistem</label>
+            <div style="font-size: 11px; color: #888;">RAM: <span id="ramUsage">-</span>% | CPU: <span id="cpuUsage">-</span>%</div>
+        </div>
+    </div>
     <script>
-        const API_URL = window.location.origin;
+        let isGenerating = false;
+        const chatContainer = document.getElementById('chatContainer');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const statusIndicator = document.getElementById('statusIndicator');
+
+        window.onload = async () => { await fetchModels(); updateSystemStats(); setInterval(updateSystemStats, 5000); };
+        function updateVal(id, val) { document.getElementById(id).innerText = val; }
         
-        function log(msg) {
-            const logs = document.getElementById('logs');
-            const line = document.createElement('div');
-            line.className = 'log-line';
-            line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-            logs.prepend(line);
-        }
-
-        async function fetchStatus() {
+        async function fetchModels() {
             try {
-                const res = await fetch(`${API_URL}/api/status`);
+                const res = await fetch('/api/models');
                 const data = await res.json();
-                document.querySelector('#stats').innerHTML = `
-                    <div class="stat-item"><div class="stat-val">${data.ram_available} / ${data.ram_total}</div><div class="stat-label">RAM</div></div>
-                    <div class="stat-item"><div class="stat-val">${data.gpu_info.split(' ')[0]}...</div><div class="stat-label">GPU</div></div>
-                    <div class="stat-item"><div class="stat-val" style="color:#10b981">AKTİF</div><div class="stat-label">Perf. Modu</div></div>
-                `;
-            } catch (e) {}
+                const select = document.getElementById('modelSelect');
+                select.innerHTML = '';
+                if (data.models && data.models.length > 0) {
+                    data.models.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m; opt.innerText = m;
+                        select.appendChild(opt);
+                    });
+                } else {
+                    select.innerHTML = '<option value="sim">Simülasyon Modu</option>';
+                }
+            } catch (e) { console.error(e); }
         }
 
-        async function loadModel() {
-            const model = document.getElementById('modelSelect').value;
-            const btn = document.getElementById('loadBtn');
-            btn.disabled = true;
-            btn.textContent = "...";
-            log(`Model yükleniyor: ${model}`);
-            
-            try {
-                await fetch(`${API_URL}/api/load`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({model: model, gpu_layers: -1})
-                });
-                log("Model hazır!");
-                document.getElementById('output').textContent = "Model yüklendi. Sorunuzu yazın.";
-            } catch (e) { log("Hata: " + e); }
-            finally { btn.disabled = false; btn.textContent = "Yükle"; }
+        function handleKeyDown(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+        
+        function appendMessage(role, text) {
+            const div = document.createElement('div');
+            div.className = 'message ' + (role === 'user' ? 'user-message' : 'ai-message');
+            div.innerHTML = '<div class="avatar ' + role + '">' + (role === 'user' ? 'Siz' : 'AI') + '</div><div class="message-content">' + text + '</div>';
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            return div.querySelector('.message-content');
         }
 
         async function sendMessage() {
-            const prompt = document.getElementById('promptInput').value;
-            const model = document.getElementById('modelSelect').value;
-            const output = document.getElementById('output');
+            const text = userInput.value.trim();
+            if (!text || isGenerating) return;
+            isGenerating = true;
+            userInput.value = '';
+            sendBtn.disabled = true;
+            statusIndicator.innerText = "● Düşünüyor...";
             
-            if (!prompt) return;
-            
-            output.textContent = "";
-            log("İstek gönderiliyor...");
-            
-            const res = await fetch(`${API_URL}/api/chat`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({prompt: prompt, model: model})
-            });
-            
-            const reader = res.body.getReader();
-            const decoder = new TextDecoder();
-            
-            while (true) {
-                const {done, value} = await reader.read();
-                if (done) break;
-                const chunk = decoder.decode(value);
-                const lines = chunk.split('\\n\\n');
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        output.textContent += line.replace('data: ', '');
+            appendMessage('user', text);
+            const aiDiv = appendMessage('ai', '<div class="typing-indicator"><span></span><span></span><span></span></div>');
+            let fullResponse = "";
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: text,
+                        model: document.getElementById('modelSelect').value,
+                        gpu_layers: parseInt(document.getElementById('gpuLayers').value),
+                        temperature: parseFloat(document.getElementById('temperature').value)
+                    })
+                });
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                aiDiv.innerHTML = "";
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\\n');
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const dataStr = line.replace('data: ', '').trim();
+                            if (dataStr === '[DONE]') break;
+                            try {
+                                const data = JSON.parse(dataStr);
+                                if (data.token) { fullResponse += data.token; aiDiv.innerText = fullResponse; chatContainer.scrollTop = chatContainer.scrollHeight; }
+                            } catch (e) {}
+                        }
                     }
                 }
-            }
-            log("Tamamlandı.");
+            } catch (error) { aiDiv.innerText = "Hata: " + error.message; }
+            finally { isGenerating = false; sendBtn.disabled = false; statusIndicator.innerText = "● Hazır"; userInput.focus(); }
         }
 
-        setInterval(fetchStatus, 5000);
-        fetchStatus();
-        log("AirLLM Studio v1.2.0 başlatıldı.");
+        function startNewChat() { chatContainer.innerHTML = ''; appendMessage('ai', 'Yeni sohbet başlatıldı.'); }
+        function changeModel() { statusIndicator.innerText = "● Yükleniyor..."; setTimeout(() => { statusIndicator.innerText = "● Hazır"; }, 1000); }
+        
+        async function updateSystemStats() {
+            try {
+                const res = await fetch('/api/system');
+                const data = await res.json();
+                document.getElementById('ramUsage').innerText = data.ram_used;
+                document.getElementById('cpuUsage').innerText = data.cpu_percent;
+            } catch (e) {}
+        }
     </script>
 </body>
 </html>
 """
 
 @app.route('/')
-def home():
-    return HTML_TEMPLATE
+def index():
+    return render_template_string(HTML_TEMPLATE)
 
-def find_free_port():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(('', 0))
-        s.listen(1)
-        port = s.getsockname()[1]
-    return port
+@app.route('/api/models')
+def get_models():
+    models = ["Qwen/Qwen2.5-7B-Instruct", "TinyLlama/TinyLlama-1.1B", "microsoft/Phi-3-mini", "Simülasyon Modu"]
+    return jsonify({"models": models})
+
+@app.route('/api/system')
+def get_system():
+    return jsonify({
+        "ram_used": round(psutil.virtual_memory().percent, 1),
+        "cpu_percent": round(psutil.cpu_percent(interval=0.1), 1)
+    })
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    data = request.json
+    message = data.get('message', '')
+    temperature = data.get('temperature', 0.7)
+    
+    def generate():
+        for chunk in generate_response_stream(message, temperature=temperature):
+            yield chunk
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
+def find_open_port(start_port=5000):
+    port = start_port
+    while True:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(('localhost', port))
+                return port
+            except OSError:
+                port += 1
 
 def open_browser(url):
-    time.sleep(1.5)
-    try:
-        import webbrowser
+    def _open():
+        time.sleep(1.5)
         webbrowser.open(url)
-    except:
-        pass
+    threading.Thread(target=_open).start()
 
 if __name__ == '__main__':
     print("========================================")
-    print("  AirLLM Studio v1.2.0 Baslatiliyor...")
-    print("  Optimizasyonlar: Aktif")
-    print("  Mod: Performans (Dusuk Gecikme)")
+    print("  AirLLM Studio v1.3 Başlatılıyor...")
     print("========================================")
-    
-    port = find_free_port()
+    port = find_open_port()
     url = f"http://localhost:{port}"
-    
-    threading.Thread(target=open_browser, args=(url,), daemon=True).start()
-    
-    try:
-        app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
-    except KeyboardInterrupt:
-        print("\nKapatiliyor...")
+    print(f"Sunucu: {url}")
+    print("Tarayıcı açılıyor...")
+    open_browser(url)
+    app.run(host='127.0.0.1', port=port, debug=False, threaded=True)
