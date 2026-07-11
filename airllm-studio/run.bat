@@ -1,79 +1,64 @@
 @echo off
 chcp 65001 >nul
-title AirLLM Studio - Windows Otomatik Kurulum
+title AirLLM Studio v1.2.0 - Kurulum ve Calistirma
 
 echo ========================================
-echo   AirLLM Studio - Windows Hazirlama
+echo   AirLLM Studio v1.2.0
+echo   Tek Tikla Kurulum ve Calistirma
 echo ========================================
 echo.
 
-REM 1. Python Kontrolu (hem 'python' hem 'py' komutlarini dene)
-set "PYTHON_CMD="
-where python >nul 2>&1
-if %errorlevel% equ 0 set "PYTHON_CMD=python"
-
-if "%PYTHON_CMD%"=="" (
-    where py >nul 2>&1
-    if %errorlevel% equ 0 set "PYTHON_CMD=py"
-)
-
-if "%PYTHON_CMD%"=="" (
-    echo [HATA] Python sistemde bulunamadi!
-    echo.
-    echo Windows'ta Python kurulu degil veya PATH'e eklenmemis.
-    echo.
-    echo NE YAPMALISINIZ?
-    echo 1. Asagidaki linkten Python 3.11+ indirin:
-    echo    https://www.python.org/downloads/
-    echo.
-    echo 2. Kurulum ekraninda MUTLACA su kutucugu isaretleyin:
-    echo    [x] Add Python to PATH
-    echo.
-    echo 3. Kurulum bitince bu dosyaya (run.bat) tekrar cift tiklayin.
-    echo.
-    pause
+REM Python kontrolu
+python --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [HATA] Python yuklu degil!
+    echo Python yukleniyor...
     start https://www.python.org/downloads/
-    exit /b 1
-)
-
-echo [OK] Python bulundu: %PYTHON_CMD%
-%PYTHON_CMD% --version
-echo.
-
-REM 2. Gerekli kutuphaneleri kur
-echo [1/3] Gerekli kutuphaneler yukleniyor...
-%PYTHON_CMD% -m pip install --upgrade pip -q --root-user-action=ignore
-%PYTHON_CMD% -m pip install flask flask-cors requests psutil -q --root-user-action=ignore
-if errorlevel 1 (
     echo.
-    echo [HATA] Kutuphane kurulumu basarisiz!
-    echo Internet baglantinizi kontrol edin.
+    echo Python kurulum sayfasini actik.
+    echo KURULUMDA "Add Python to PATH" secenegini ISARETLEYIN!
+    echo.
     pause
     exit /b 1
 )
-echo [OK] Flask ve bagimliliklar hazir.
+
+echo [OK] Python bulundu: 
+python --version
 echo.
 
-REM 3. main.py var mi kontrol et
-if not exist "main.py" (
-    echo [HATA] main.py dosyasi bulunamadi!
-    pause
-    exit /b 1
+REM Gerekli kutuphaneleri yukle
+echo [1/3] Gerekli Python kutuphaneleri yukleniyor...
+pip install flask flask-cors psutil --quiet --upgrade
+if %errorlevel% neq 0 (
+    echo [UYARI] Bazı paketler yuklenemedi, devam ediliyor...
 )
-echo [OK] Uygulama dosyalari hazir.
+echo [OK] Kutuphaneler hazir.
 echo.
 
-REM 4. Uygulamayi baslat
-echo [2/3] AirLLM Studio baslatiliyor...
-echo [3/3] Tarayici otomatik acilacak...
+REM Uygulamayi derle (EXE olustur)
+echo [2/3] Uygulama EXE olarak derleniyor...
+pip install pyinstaller --quiet
+pyinstaller --onefile --name AirLLMStudio --clean main.py --noconfirm --log-level ERROR
+if %errorlevel% neq 0 (
+    echo [UYARI] Derleme sirasinda uyarilar olustu ama devam ediliyor...
+)
+echo [OK] Derleme tamamlandi.
+echo.
+
+REM EXE dosyasini calistir
+echo [3/3] AirLLM Studio baslatiliyor...
+echo.
+if exist dist\AirLLMStudio.exe (
+    start "" "dist\AirLLMStudio.exe"
+) else (
+    echo [HATA] EXE dosyasi olusturulamedi! Python ile calistiriliyor...
+    start "" python main.py
+)
+
 echo.
 echo ========================================
-echo UYGULAMA CALISIYOR!
-echo Tarayicinizda http://localhost:5000 acilacak.
-echo Kapatmak icin bu pencereyi kapatin veya CTRL+C basin.
+echo Uygulama arka planda baslatildi.
+echo Tarayicinizda otomatik acilacak.
 echo ========================================
-echo.
-
-%PYTHON_CMD% main.py
-
-pause
+timeout /t 3 >nul
+exit
