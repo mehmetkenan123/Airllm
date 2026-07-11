@@ -2,34 +2,38 @@
 chcp 65001 >nul
 title AirLLM Studio - Kurulum ve Calistirici
 
+:: Null dosyası oluşumunu engelle
+if exist "nul" del /q "nul" 2>nul
+
 echo ========================================
 echo     AirLLM Studio - Tek Tıkla Çözüm
 echo ========================================
 echo.
 
-REM === PYTHON BULMA (GELIŞTIRILMIŞ) ===
-set PYTHON_CMD=
+:: Python komutunu temizle
+set "PYTHON_CMD="
 
-REM 1. Önce registry'den Python yolunu almayı dene
+REM === PYTHON BULMA (GELIŞTIRILMIŞ) ===
+:: Registry'den Python yolunu al
 for /f "tokens=2*" %%a in ('reg query "HKLM\SOFTWARE\Python\PythonCore" /s /v "InstallPath" 2^>nul ^| findstr /i "InstallPath"') do (
     if exist "%%b\python.exe" set "PYTHON_CMD=%%b\python.exe"
 )
 
-REM 2. Registry bulunamazsa, where komutuyla dene
+:: where komutuyla dene
 if "%PYTHON_CMD%"=="" (
     for /f "delims=" %%i in ('where python 2^>nul') do (
         if "%PYTHON_CMD%"=="" set "PYTHON_CMD=%%i"
     )
 )
 
-REM 3. python3 komutunu dene
+:: python3 komutunu dene
 if "%PYTHON_CMD%"=="" (
     for /f "delims=" %%i in ('where python3 2^>nul') do (
         if "%PYTHON_CMD%"=="" set "PYTHON_CMD=%%i"
     )
 )
 
-REM 4. Yaygın Python kurulum yollarını manuel kontrol et
+:: Yaygın Python kurulum yollarını manuel kontrol et
 if "%PYTHON_CMD%"=="" if exist "C:\Python39\python.exe" set "PYTHON_CMD=C:\Python39\python.exe"
 if "%PYTHON_CMD%"=="" if exist "C:\Python38\python.exe" set "PYTHON_CMD=C:\Python38\python.exe"
 if "%PYTHON_CMD%"=="" if exist "C:\Python37\python.exe" set "PYTHON_CMD=C:\Python37\python.exe"
@@ -49,10 +53,6 @@ if "%PYTHON_CMD%"=="" (
     echo 2. Kurulum sirasinda "Add Python to PATH" secenegini isaretleyin
     echo 3. Komut satirini yeniden acin
     echo.
-    echo Yuklu Python surumlerini kontrol etmek icin:
-    echo   where python
-    echo   where python3
-    echo.
     pause
     exit /b 1
 )
@@ -60,6 +60,9 @@ if "%PYTHON_CMD%"=="" (
 echo ✓ Python bulundu: %PYTHON_CMD%
 %PYTHON_CMD% --version
 echo.
+
+:: Menü seçimi için değişkeni temizle
+set "CHOICE="
 
 REM === MENÜ ===
 echo Ne yapmak istersiniz?
@@ -119,11 +122,12 @@ echo.
 
 if exist "airllm-studio\backend\app.py" (
     echo AirLLM Studio Flask uygulaması başlatılıyor...
-    cd airllm-studio\backend
-    python app.py
+    cd /d "%~dp0airllm-studio\backend"
+    "%PYTHON_CMD%" app.py
 ) else if exist "airllm-studio\main.py" (
     echo Ana uygulama başlatılıyor...
-    python airllm-studio\main.py
+    cd /d "%~dp0"
+    "%PYTHON_CMD%" airllm-studio\main.py
 ) else (
     echo UYARI: backend/app.py veya main.py bulunamadi!
     echo Manuel olarak baslatin: python airllm-studio\backend\app.py
@@ -160,9 +164,9 @@ if exist "airllm-studio\build_exe.py" (
     
     echo.
     echo EXE paketleniyor...
-    cd airllm-studio
+    cd /d "%~dp0airllm-studio"
     "%PYTHON_CMD%" build_exe.py
-    cd ..
+    cd /d "%~dp0"
     
     echo.
     echo ========================================

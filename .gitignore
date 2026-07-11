@@ -1,49 +1,82 @@
 ```
-# Logs and temp files
-*.log
-*.tmp
-*.swp
+# Dependencies
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
-# Environment
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Logs
+*.log
+
+# Environment variables
 .env
 .env.local
 *.env.*
 
-# Editors
+# Editor files
 .vscode/
 .idea/
+*.swp
+*.swo
+*.tmp
 
-# OS specific
+# OS generated files
 .DS_Store
 Thumbs.db
 
-# Dependencies
-node_modules/
-.venv/
-venv/
-__pycache__/
-.mypy_cache/
-.pytest_cache/
-dist/
-build/
-target/
-.gradle/
-
-# Compiled files
-*.pyc
-*.class
-*.o
-*.exe
-*.dll
-*.so
-*.a
-*.obj
-*.out
-
-# Coverage
+# Coverage reports
+.coverage
 coverage/
 htmlcov/
-.coverage
+
+# Python specific
+.Python
+*.so
+*.pyc
+*.pyo
+*.pyd
+*.py~
+*.pyc.*
+__pycache__/
+*.py-[0-9]*
+*.pyc.[0-9]*
+
+# MyPy cache
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pytest cache
+.pytest_cache/
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Node.js (if present)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Gradle
+.gradle/
+build/
+
+# Target (Rust, Java, etc.)
+target/
 
 # Compressed files
 *.zip
@@ -64,4 +97,8 @@ htmlcov/
 *.Z
 *.lz
 *.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
 ```
