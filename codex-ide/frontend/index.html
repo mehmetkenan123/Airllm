@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codex IDE - Yerel AI Güçlü Kodlama Ortamı</title>
+    <style>
+        :root {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252526;
+            --bg-tertiary: #333333;
+            --text-primary: #cccccc;
+            --text-secondary: #858585;
+            --accent: #007acc;
+            --accent-hover: #005f9e;
+            --success: #4ec9b0;
+            --warning: #dcdcaa;
+            --error: #f48771;
+            --border: #454545;
+            --sidebar-width: 50px;
+            --explorer-width: 250px;
+            --panel-height: 200px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Title Bar */
+        .title-bar {
+            height: 30px;
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .title-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .app-icon {
+            width: 20px;
+            height: 20px;
+            background: var(--accent);
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .window-control {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .window-control.close { background: #ff5f57; }
+        .window-control.minimize { background: #ffbd2e; }
+        .window-control.maximize { background: #28c940; }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Activity Bar */
+        .activity-bar {
+            width: var(--sidebar-width);
+            background: var(--bg-secondary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 0;
+            border-right: 1px solid var(--border);
+        }
+
+        .activity-item {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-left: 2px solid transparent;
+            transition: all 0.2s;
+            margin-bottom: 5px;
+        }
+
+        .activity-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .activity-item.active {
+            border-left-color: var(--accent);
+            background: var(--bg-tertiary);
+        }
+
+        .activity-icon {
+            font-size: 20px;
+            color: var(--text-secondary);
+        }
+
+        .activity-item.active .activity-icon {
+            color: var(--text-primary);
+        }
+
+        /* Side Panel */
+        .side-panel {
+            width: var(--explorer-width);
+            background: var(--bg-secondary);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+        }
+
+        .panel-header {
+            padding: 10px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 5px;
+        }
+
+        /* File Tree */
+        .file-tree-item {
+            padding: 4px 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+        }
+
+        .file-tree-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .file-icon {
+            font-size: 14px;
+        }
+
+        /* Editor Area */
+        .editor-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .tabs-bar {
+            height: 35px;
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            padding: 0 5px;
+            gap: 2px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab {
+            padding: 8px 15px;
+            background: var(--bg-tertiary);
+            border-radius: 3px 3px 0 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            min-width: 120px;
+        }
+
+        .tab.active {
+            background: var(--bg-primary);
+        }
+
+        .tab-close {
+            opacity: 0;
+            font-size: 14px;
+        }
+
+        .tab:hover .tab-close {
+            opacity: 1;
+        }
+
+        .editor-container {
+            flex: 1;
+            background: var(--bg-primary);
+            overflow: auto;
+            position: relative;
+        }
+
+        .code-editor {
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background: transparent;
+            border: none;
+            outline: none;
+            resize: none;
+        }
+
+        .line-numbers {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 50px;
+            height: 100%;
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            text-align: right;
+            padding: 20px 10px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            user-select: none;
+        }
+
+        /* AI Panel */
+        .ai-panel {
+            height: var(--panel-height);
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ai-panel-header {
+            padding: 8px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .ai-panel-title {
+            font-size: 12px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .ai-badge {
+            background: var(--accent);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+        }
+
+        .ai-chat-container {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chat-message {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .chat-message.user {
+            background: var(--accent);
+            align-self: flex-end;
+            color: white;
+        }
+
+        .chat-message.ai {
+            background: var(--bg-tertiary);
+            align-self: flex-start;
+        }
+
+        .chat-input-container {
+            padding: 10px;
+            display: flex;
+            gap: 8px;
+            border-top: 1px solid var(--border);
+        }
+
+        .chat-input {
+            flex: 1;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 8px 12px;
+            color: var(--text-primary);
+            font-size: 13px;
+            outline: none;
+        }
+
+        .chat-input:focus {
+            border-color: var(--accent);
+        }
+
+        .btn-send {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .btn-send:hover {
+            background: var(--accent-hover);
+        }
+
+        /* Terminal Panel */
+        .terminal-panel {
+            height: 200px;
+            background: #1a1a1a;
+            border-top: 1px solid var(--border);
+            display: none;
+        }
+
+        .terminal-panel.visible {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .terminal-tabs {
+            display: flex;
+            padding: 5px 10px;
+            gap: 5px;
+            background: var(--bg-secondary);
+        }
+
+        .terminal-tab {
+            padding: 4px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .terminal-tab.active {
+            background: var(--accent);
+        }
+
+        .terminal-content {
+            flex: 1;
+            padding: 10px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            overflow-y: auto;
+            color: #cccccc;
+        }
+
+        .terminal-line {
+            margin-bottom: 4px;
+        }
+
+        .terminal-prompt {
+            color: var(--success);
+        }
+
+        /* Status Bar */
+        .status-bar {
+            height: 22px;
+            background: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px;
+            font-size: 12px;
+        }
+
+        .status-left, .status-right {
+            display: flex;
+            gap: 15px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Modal AI Canvas */
+        .modal-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-canvas.visible {
+            display: flex;
+        }
+
+        .canvas-content {
+            background: var(--bg-secondary);
+            width: 80%;
+            height: 80%;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .canvas-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .canvas-title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .canvas-body {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .thinking-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .thinking-step {
+            padding: 10px 15px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .step-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .step-active .step-indicator {
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Code Block */
+        .code-block {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .code-block pre {
+            margin: 0;
+        }
+
+        /* Mermaid Diagram */
+        .mermaid-container {
+            background: white;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        /* Model Manager Section */
+        .model-manager {
+            padding: 10px;
+        }
+
+        .model-card {
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .model-card:hover {
+            background: var(--border);
+        }
+
+        .model-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .model-info {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: var(--bg-primary);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            transition: width 0.3s;
+        }
+
+        /* Command Palette */
+        .command-palette {
+            position: fixed;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-10px);
+            width: 600px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            z-index: 1001;
+            display: none;
+        }
+
+        .command-palette.visible {
+            display: block;
+            animation: slideDown 0.2s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(-10px); }
+        }
+
+        .command-input {
+            width: 100%;
+            padding: 12px 15px;
+            background: var(--bg-primary);
+            border: none;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .command-list {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 5px;
+        }
+
+        .command-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .command-item:hover, .command-item.selected {
+            background: var(--accent);
+        }
+
+        .command-shortcut {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .command-item:hover .command-shortcut,
+        .command-item.selected .command-shortcut {
+            color: rgba(255, 255, 255, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <!-- Title Bar -->
+    <div class="title-bar">
+        <div class="title-bar-left">
+            <div class="app-icon">CX</div>
+            <span style="font-size: 13px;">Codex IDE</span>
+        </div>
+        <div class="window-controls">
+            <div class="window-control minimize"></div>
+            <div class="window-control maximize"></div>
+            <div class="window-control close"></div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Activity Bar -->
+        <div class="activity-bar">
+            <div class="activity-item active" title="Explorer">
+                <span class="activity-icon">📁</span>
+            </div>
+            <div class="activity-item" title="Search">
+                <span class="activity-icon">🔍</span>
+            </div>
+            <div class="activity-item" title="AI Models">
+                <span class="activity-icon">🤖</span>
+            </div>
+            <div class="activity-item" title="Source Control">
+                <span class="activity-icon">🌿</span>
+            </div>
+            <div class="activity-item" title="Debug">
+                <span class="activity-icon">🐛</span>
+            </div>
+            <div class="activity-item" title="Extensions">
+                <span class="activity-icon">🧩</span>
+            </div>
+            <div style="flex: 1;"></div>
+            <div class="activity-item" title="Settings">
+                <span class="activity-icon">⚙️</span>
+            </div>
+        </div>
+
+        <!-- Side Panel -->
+        <div class="side-panel">
+            <div class="panel-header">EXPLORER</div>
+            <div class="panel-content">
+                <div class="model-manager" id="modelManager">
+                    <div class="panel-header" style="margin-bottom: 10px;">AI MODELS</div>
+                    <div id="modelsList"></div>
+                </div>
+                <div class="panel-header" style="margin-top: 20px;">PROJECT FILES</div>
+                <div id="fileTree"></div>
+            </div>
+        </div>
+
+        <!-- Editor Area -->
+        <div class="editor-area">
+            <div class="tabs-bar" id="tabsBar">
+                <div class="tab active">
+                    <span class="file-icon">🐍</span>
+                    app.py
+                    <span class="tab-close">×</span>
+                </div>
+            </div>
+            <div class="editor-container">
+                <div class="line-numbers" id="lineNumbers">1</div>
+                <textarea class="code-editor" id="codeEditor" spellcheck="false"># Codex IDE - Backend Application
+# Start coding with AI assistance...
+
+def hello_world():
+    """AI-powered function"""
+    print("Hello from Codex IDE!")
+    
+if __name__ == "__main__":
+    hello_world()
+</textarea>
+            </div>
+
+            <!-- AI Panel -->
+            <div class="ai-panel">
+                <div class="ai-panel-header">
+                    <div class="ai-panel-title">
+                        <span>💡</span>
+                        AI Assistant
+                        <span class="ai-badge">LOCAL</span>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn-send" style="padding: 4px 10px; font-size: 11px;" onclick="openDeepThinking()">🧠 Deep Think</button>
+                        <button class="btn-send" style="padding: 4px 10px; font-size: 11px;" onclick="toggleTerminal()">⌨️ Terminal</button>
+                    </div>
+                </div>
+                <div class="ai-chat-container" id="chatContainer">
+                    <div class="chat-message ai">
+                        Merhaba! Ben Codex AI asistanınız. Kod tamamlama, refactoring, hata ayıklama veya herhangi bir sorunuz için buradayım. Size nasıl yardımcı olabilirim?
+                    </div>
+                </div>
+                <div class="chat-input-container">
+                    <input type="text" class="chat-input" id="chatInput" placeholder="AI'ya sorun... (Ctrl+Enter gönder)" onkeypress="handleChatKey(event)">
+                    <button class="btn-send" onclick="sendChat()">Gönder</button>
+                </div>
+            </div>
+
+            <!-- Terminal Panel -->
+            <div class="terminal-panel" id="terminalPanel">
+                <div class="terminal-tabs">
+                    <div class="terminal-tab active">Terminal</div>
+                    <div class="terminal-tab">Output</div>
+                    <div class="terminal-tab">Problems</div>
+                </div>
+                <div class="terminal-content" id="terminalContent">
+                    <div class="terminal-line"><span class="terminal-prompt">user@codex:~$</span> codex-ide starting...</div>
+                    <div class="terminal-line">✅ Backend ready on http://localhost:5000</div>
+                    <div class="terminal-line">🤖 AI models loaded and ready</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <div class="status-left">
+            <div class="status-item">🌿 main</div>
+            <div class="status-item">✓ 0 ⚠ 0 ✕ 0</div>
+            <div class="status-item">Python</div>
+        </div>
+        <div class="status-right">
+            <div class="status-item" id="gpuStatus">GPU: Checking...</div>
+            <div class="status-item" id="modelStatus">Model: None</div>
+            <div class="status-item">Ln 1, Col 1</div>
+            <div class="status-item">UTF-8</div>
+        </div>
+    </div>
+
+    <!-- Deep Thinking Modal -->
+    <div class="modal-canvas" id="deepThinkingModal">
+        <div class="canvas-content">
+            <div class="canvas-header">
+                <div class="canvas-title">🧠 Derin Düşünme Modu</div>
+                <button onclick="closeDeepThinking()" style="background: none; border: none; color: var(--text-primary); cursor: pointer; font-size: 20px;">×</button>
+            </div>
+            <div class="canvas-body" id="thinkingBody">
+                <div class="thinking-steps" id="thinkingSteps">
+                    <!-- Thinking steps will be added here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Command Palette -->
+    <div class="command-palette" id="commandPalette">
+        <input type="text" class="command-input" id="commandInput" placeholder="Type a command or search..." oninput="filterCommands()" onkeydown="handleCommandKey(event)">
+        <div class="command-list" id="commandList">
+            <div class="command-item selected" data-command="new-file">
+                <span>📄 New File</span>
+                <span class="command-shortcut">Ctrl+N</span>
+            </div>
+            <div class="command-item" data-command="save">
+                <span>💾 Save</span>
+                <span class="command-shortcut">Ctrl+S</span>
+            </div>
+            <div class="command-item" data-command="find">
+                <span>🔍 Find in Files</span>
+                <span class="command-shortcut">Ctrl+Shift+F</span>
+            </div>
+            <div class="command-item" data-command="terminal">
+                <span>⌨️ Toggle Terminal</span>
+                <span class="command-shortcut">Ctrl+`</span>
+            </div>
+            <div class="command-item" data-command="ai-inline">
+                <span>✨ AI Inline Edit</span>
+                <span class="command-shortcut">Ctrl+K</span>
+            </div>
+            <div class="command-item" data-command="ai-deep">
+                <span>🧠 AI Deep Thinking</span>
+                <span class="command-shortcut">Ctrl+Shift+D</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let chatHistory = [];
+        let currentModel = null;
+        let commandIndex = 0;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadModels();
+            updateSystemInfo();
+            setupKeyboardShortcuts();
+            updateLineNumbers();
+        });
+
+        // Load available models
+        async function loadModels() {
+            try {
+                const response = await fetch('/api/models/list');
+                const data = await response.json();
+                
+                const modelsList = document.getElementById('modelsList');
+                modelsList.innerHTML = '';
+                
+                data.models.forEach(model => {
+                    const card = document.createElement('div');
+                    card.className = 'model-card';
+                    card.innerHTML = `
+                        <div class="model-name">${model.name}</div>
+                        <div class="model-info">
+                            <span>${model.type}</span>
+                            <span>${model.ram_requirement[model.recommended]}GB RAM</span>
+                        </div>
+                        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 5px;">${model.description}</div>
+                        <div class="progress-bar" id="progress-${model.id}" style="display: none;">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                    `;
+                    card.onclick = () => downloadModel(model.id);
+                    modelsList.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Failed to load models:', error);
+            }
+        }
+
+        // Download model
+        async function downloadModel(modelId) {
+            try {
+                const response = await fetch('/api/models/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model_id: modelId })
+                });
+                const data = await response.json();
+                
+                const progressBar = document.getElementById(`progress-${modelId}`);
+                if (progressBar) {
+                    progressBar.style.display = 'block';
+                    pollProgress(data.progress_id, progressBar);
+                }
+            } catch (error) {
+                console.error('Failed to download model:', error);
+            }
+        }
+
+        // Poll download progress
+        async function pollProgress(progressId, progressBar) {
+            const interval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/models/progress/${progressId}`);
+                    const data = await response.json();
+                    
+                    if (data.status === 'downloading') {
+                        const fill = progressBar.querySelector('.progress-fill');
+                        fill.style.width = `${data.progress}%`;
+                    } else if (data.status === 'completed') {
+                        clearInterval(interval);
+                        progressBar.style.display = 'none';
+                        addTerminalLine(`✅ Model downloaded successfully`);
+                        updateModelStatus('Loaded');
+                    } else if (data.status === 'error') {
+                        clearInterval(interval);
+                        progressBar.style.display = 'none';
+                        addTerminalLine(`❌ Download failed: ${data.message}`);
+                    }
+                } catch (error) {
+                    clearInterval(interval);
+                }
+            }, 500);
+        }
+
+        // Update system info
+        async function updateSystemInfo() {
+            try {
+                const response = await fetch('/api/system/info');
+                const data = await response.json();
+                
+                const gpuStatus = document.getElementById('gpuStatus');
+                if (data.info.gpu.available) {
+                    const gpu = data.info.gpu.devices[0];
+                    gpuStatus.textContent = `GPU: ${gpu.name} (${gpu.memory_allocated.toFixed(1)}/${gpu.memory_total.toFixed(1)}GB)`;
+                } else {
+                    gpuStatus.textContent = 'GPU: Not Available';
+                }
+            } catch (error) {
+                console.error('Failed to get system info:', error);
+            }
+        }
+
+        // Send chat message
+        async function sendChat() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Add user message
+            addChatMessage(message, 'user');
+            input.value = '';
+            
+            // Send to API
+            try {
+                const response = await fetch('/api/ai/inline', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        prompt: message,
+                        context: document.getElementById('codeEditor').value
+                    })
+                });
+                const data = await response.json();
+                
+                // Add AI response
+                let aiResponse = data.explanation || 'Processing...';
+                if (data.code) {
+                    aiResponse += '\n\n```python\n' + data.code + '\n```';
+                }
+                addChatMessage(aiResponse, 'ai');
+                
+            } catch (error) {
+                addChatMessage('Error: Could not connect to AI backend', 'ai');
+            }
+        }
+
+        // Add chat message
+        function addChatMessage(text, type) {
+            const container = document.getElementById('chatContainer');
+            const message = document.createElement('div');
+            message.className = `chat-message ${type}`;
+            message.textContent = text;
+            container.appendChild(message);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Handle chat key press
+        function handleChatKey(event) {
+            if (event.ctrlKey && event.key === 'Enter') {
+                sendChat();
+            }
+        }
+
+        // Open deep thinking modal
+        async function openDeepThinking() {
+            const modal = document.getElementById('deepThinkingModal');
+            const stepsContainer = document.getElementById('thinkingSteps');
+            
+            modal.classList.add('visible');
+            stepsContainer.innerHTML = '';
+            
+            const steps = [
+                "Problem analizi yapılıyor...",
+                "İlgili dosyalar taranıyor...",
+                "Mimari desenler değerlendiriliyor...",
+                "En iyi pratikler kontrol ediliyor...",
+                "Çözüm stratejisi oluşturuluyor..."
+            ];
+            
+            for (let i = 0; i < steps.length; i++) {
+                await new Promise(resolve => setTimeout(resolve, 800));
+                const step = document.createElement('div');
+                step.className = 'thinking-step step-active';
+                step.innerHTML = `
+                    <div class="step-indicator">${i + 1}</div>
+                    <span>${steps[i]}</span>
+                `;
+                stepsContainer.appendChild(step);
+            }
+            
+            // Show solution
+            setTimeout(() => {
+                const solution = document.createElement('div');
+                solution.className = 'code-block';
+                solution.innerHTML = `
+<pre><strong>Önerilen Çözüm:</strong>
+
+1. Interface tanımla
+2. Implementation oluştur  
+3. Testleri yaz
+4. Refactor et
+
+\`\`\`mermaid
+graph TD
+    A[Client] --> B[API Gateway]
+    B --> C[Service Layer]
+    C --> D[Data Layer]
+\`\`\`
+</pre>`;
+                stepsContainer.appendChild(solution);
+            }, 5000);
+        }
+
+        // Close deep thinking modal
+        function closeDeepThinking() {
+            document.getElementById('deepThinkingModal').classList.remove('visible');
+        }
+
+        // Toggle terminal
+        function toggleTerminal() {
+            const panel = document.getElementById('terminalPanel');
+            panel.classList.toggle('visible');
+        }
+
+        // Add terminal line
+        function addTerminalLine(text) {
+            const content = document.getElementById('terminalContent');
+            const line = document.createElement('div');
+            line.className = 'terminal-line';
+            line.textContent = text;
+            content.appendChild(line);
+            content.scrollTop = content.scrollHeight;
+        }
+
+        // Update model status
+        function updateModelStatus(status) {
+            document.getElementById('modelStatus').textContent = `Model: ${status}`;
+        }
+
+        // Update line numbers
+        function updateLineNumbers() {
+            const editor = document.getElementById('codeEditor');
+            const lines = editor.value.split('\n').length;
+            const lineNumbers = document.getElementById('lineNumbers');
+            lineNumbers.innerHTML = Array(lines).fill(0).map((_, i) => i + 1).join('<br>');
+        }
+
+        document.getElementById('codeEditor').addEventListener('input', updateLineNumbers);
+
+        // Setup keyboard shortcuts
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                // Ctrl+K - Command palette
+                if (e.ctrlKey && e.key === 'k') {
+                    e.preventDefault();
+                    toggleCommandPalette();
+                }
+                
+                // Escape - Close modals
+                if (e.key === 'Escape') {
+                    document.getElementById('commandPalette').classList.remove('visible');
+                    document.getElementById('deepThinkingModal').classList.remove('visible');
+                }
+                
+                // Ctrl+` - Toggle terminal
+                if (e.ctrlKey && e.key === '`') {
+                    e.preventDefault();
+                    toggleTerminal();
+                }
+            });
+        }
+
+        // Toggle command palette
+        function toggleCommandPalette() {
+            const palette = document.getElementById('commandPalette');
+            palette.classList.toggle('visible');
+            if (palette.classList.contains('visible')) {
+                document.getElementById('commandInput').focus();
+            }
+        }
+
+        // Filter commands
+        function filterCommands() {
+            const input = document.getElementById('commandInput').value.toLowerCase();
+            const items = document.querySelectorAll('.command-item');
+            
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(input) ? 'flex' : 'none';
+            });
+        }
+
+        // Handle command key
+        function handleCommandKey(event) {
+            const items = document.querySelectorAll('.command-item:not([style*="display: none"])');
+            
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                commandIndex = (commandIndex + 1) % items.length;
+                updateCommandSelection(items);
+            } else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                commandIndex = (commandIndex - 1 + items.length) % items.length;
+                updateCommandSelection(items);
+            } else if (event.key === 'Enter') {
+                event.preventDefault();
+                executeCommand(items[commandIndex].dataset.command);
+            }
+        }
+
+        // Update command selection
+        function updateCommandSelection(items) {
+            items.forEach((item, index) => {
+                item.classList.toggle('selected', index === commandIndex);
+            });
+        }
+
+        // Execute command
+        function executeCommand(command) {
+            document.getElementById('commandPalette').classList.remove('visible');
+            
+            switch(command) {
+                case 'new-file':
+                    addTerminalLine('📄 Creating new file...');
+                    break;
+                case 'save':
+                    addTerminalLine('💾 File saved');
+                    break;
+                case 'terminal':
+                    toggleTerminal();
+                    break;
+                case 'ai-deep':
+                    openDeepThinking();
+                    break;
+            }
+            
+            commandIndex = 0;
+        }
+
+        // File tree (sample)
+        const sampleFiles = [
+            { name: 'backend/app.py', icon: '🐍' },
+            { name: 'frontend/index.html', icon: '🌐' },
+            { name: 'config/settings.json', icon: '⚙️' },
+            { name: 'README.md', icon: '📝' }
+        ];
+
+        const fileTree = document.getElementById('fileTree');
+        sampleFiles.forEach(file => {
+            const item = document.createElement('div');
+            item.className = 'file-tree-item';
+            item.innerHTML = `<span class="file-icon">${file.icon}</span>${file.name}`;
+            item.onclick = () => {
+                addTerminalLine(`📂 Opening ${file.name}...`);
+            };
+            fileTree.appendChild(item);
+        });
+    </script>
+</body>
+</html>
