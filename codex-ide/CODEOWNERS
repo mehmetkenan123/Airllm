@@ -1,0 +1,16 @@
+# See https://docs.github.com/articles/github-terms-of-service
+
+apps/desktop/src/main/**/* @codex-ide/core-team
+apps/desktop/src/preload/**/* @codex-ide/core-team
+packages/ai-core/**/* @codex-ide/ai-team
+packages/ai-backends/**/* @codex-ide/ai-team
+packages/model-manager/**/* @codex-ide/ai-team
+packages/editor/**/* @codex-ide/editor-team
+packages/lsp-client/**/* @codex-ide/editor-team
+packages/ui/**/* @codex-ide/ui-team
+packages/themes/**/* @codex-ide/ui-team
+packages/extensions/**/* @codex-ide/extensions-team
+packages/git/**/* @codex-ide/integrations-team
+packages/terminal/**/* @codex-ide/integrations-team
+packages/indexing/**/* @codex-ide/search-team
+packages/search/**/* @codex-ide/search-team

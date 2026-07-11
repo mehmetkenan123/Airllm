@@ -1,0 +1,60 @@
+appId: dev.codex-ide.desktop
+productName: Codex IDE
+version: 1.0.0
+description: A fully open-source, offline-capable IDE powered by local LLMs
+copyright: Copyright © 2024 Codex IDE Contributors
+
+directories:
+  output: dist
+  buildResources: resources
+
+files:
+  - dist/**/*
+  - resources/**/*
+  - package.json
+
+extraResources:
+  - models/**/*
+  - resources/icons/**/*
+
+mac:
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  icon: resources/icons/icon.icns
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+        - ia32
+  icon: resources/icons/icon.ico
+  requestedExecutionLevel: asInvoker
+
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Development
+  icon: resources/icons
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
+publish:
+  provider: github
+  releaseType: release
+
+compression: normal
+removePackageScripts: true

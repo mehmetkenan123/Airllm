@@ -1,28 +1,61 @@
 ```
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
-venv/
-.venv/
-.ENV
-.python-version
-pip-log.txt
-pip-delete-this-directory.txt
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.log
-*.tmp
+# Dependencies
+node_modules/
+.pnpm-store/
+.npm/
+
+# Build outputs
+dist/
+build/
+target/
+out/
+lib/
+
+# TypeScript/JavaScript
+*.tsbuildinfo
+*.js.map
+*.ts.map
+
+# Package manager
+pnpm-lock.yaml
+.yarn/
+.yarn-cache/
+
+# IDE
+.vscode/
+.idea/
 *.swp
-*~
+*.swo
+
+# OS
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Coverage
+coverage/
+.nyc_output/
+istanbul/
+.jest/
+
+# Temporary files
+*.tmp
+*.temp
+.TemporaryItems
+
+# Processed files
+*.min.js
+*.bundle.js
+*.css.map
+
+# Local configuration
+local/
+config/local.*
 ```
