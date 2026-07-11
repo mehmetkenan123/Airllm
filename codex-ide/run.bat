@@ -1,46 +1,54 @@
 @echo off
 chcp 65001 >nul
-title Codex IDE v4.0 - Ultra Advanced Edition
-
-echo ==================================================
-echo   CODEX IDE v4.0 - ULTRA ADVANCED EDITION
-echo   Humanity's Most Advanced Development Environment
-echo ==================================================
+cls
+echo ============================================================
+echo CODEX IDE v5.0 - Başlatılıyor...
+echo ============================================================
 echo.
 
 cd /d "%~dp0"
 
-REM Check Python
+REM Python versiyonunu kontrol et
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Python not found! Please install Python 3.8+
+    echo [HATA] Python bulunamadı! Python 3.8+ gerekli.
     pause
     exit /b 1
 )
 
-echo [OK] Python detected
+echo [OK] Python bulundu
 echo.
 
-REM Install dependencies if needed
-echo Checking dependencies...
-pip show flask >nul 2>&1 || pip install flask --quiet
-pip show psutil >nul 2>&1 || pip install psutil --quiet
-echo [OK] Dependencies ready
+REM Gerekli paketleri yükle
+echo Paketler kontrol ediliyor...
+pip install psutil packaging --quiet 2>nul
+echo [OK] Paketler hazır
 echo.
 
-REM Create models directory
+REM Veritabanı dizinlerini oluştur
 if not exist "models" mkdir models
-echo [OK] Models directory ready
+if not exist "config" mkdir config
+if not exist "tests" mkdir tests
+if not exist "docs" mkdir docs
+echo [OK] Dizinler hazır
 echo.
 
-echo Starting Codex IDE v4.0...
-echo ==================================================
+echo ============================================================
+echo Codex IDE başlatılıyor...
+echo ============================================================
+echo.
+echo 🌐 Tarayıcıda açın: http://localhost:8080
+echo 📁 Proje dizini: %CD%
+echo.
+echo ⌨️  Kısayollar:
+echo    Ctrl+Shift+P - Komut Paleti
+echo    Ctrl+K - AI Chat
+echo    Ctrl+B - Sidebar Toggle
+echo.
+echo ============================================================
 echo.
 
-python main.py
+REM Uygulamayı başlat
+python backend/app.py
 
-if errorlevel 1 (
-    echo.
-    echo [ERROR] Application crashed!
-    pause
-)
+pause
