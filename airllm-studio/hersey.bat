@@ -22,50 +22,32 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-for /f "tokens=*" %%i in ('python --version 2^>^&1') do set PYVER=%%i
+for /f "delims=" %%i in ('python --version 2^>^&1') do set PYVER=%%i
 echo [OK] Python bulundu: %PYVER%
 echo.
 
 :: 2. GEREKLI KUTUPHANELERIN KURULUMU
-echo [ADIM 1/3] Gerekli kutuphaneler yukleniyor/guncelleniyor...
+echo [ADIM 1/2] Gerekli kutuphaneler yukleniyor...
 echo Bu islem internet hizina gore degisebilir, lutfen bekleyin...
-python -m pip install --upgrade pip --quiet --disable-pip-version-check
-pip install flask pyinstaller psutil requests transformers accelerate airllm torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --quiet --disable-pip-version-check
+python -m pip install --upgrade pip --quiet
+pip install flask psutil requests --quiet
 if %errorlevel% neq 0 (
-    echo [HATA] Kutuphaneler yuklenirken hata olustu. Internet baglantinizi kontrol edin.
+    echo [HATA] Kutuphaneler yuklenirken hata olustu.
     pause
     exit /b 1
 )
 echo [OK] Kutuphaneler hazir.
 echo.
 
-:: 3. UYGULAMAYI DERLEME (EXE OLUSTURMA)
-echo [ADIM 2/3] Uygulama derleniyor (EXE olusturuluyor)...
-echo Bu islem ilk seferde biraz zaman alabilir, lutfen bekleyin...
-echo.
-
-pyinstaller --onefile --name AirLLMStudio --clean --noconfirm main.py
-if %errorlevel% neq 0 (
-    echo [HATA] Derleme basarisiz oldu! Hata mesajini inceleyin.
-    pause
-    exit /b 1
-)
-
-echo.
-echo [OK] Derleme Basarili!
-echo Olusturulan dosya: dist\AirLLMStudio.exe
-echo.
-
-:: 4. UYGULAMAYI CALISTIRMA
-echo [ADIM 3/3] Uygulama baslatiliyor...
+:: 3. UYGULAMAYI CALISTIRMA
+echo [ADIM 2/2] Uygulama baslatiliyor...
 echo ----------------------------------------
-start "" "dist\AirLLMStudio.exe"
+start "" python "%~dp0main.py"
 
 echo.
 echo ========================================
 echo AirLLM Studio arka planda baslatildi!
 echo Tarayicinizda otomatik acilacaktir.
-echo Kapatmak icin bu pencereyi kapatabilirsiniz.
 echo ========================================
-timeout /t 5 >nul
+timeout /t 2 >nul
 exit
