@@ -26,8 +26,9 @@ echo "[+] Çıkmak için CTRL+C yapabilirsiniz"
 echo ""
 echo "========================================"
 
-# Flask uygulamasını başlat
-export FLASK_APP=backend/app
+# Flask uygulamasını DOĞRUDAN backend/app.py üzerinden başlat
+# Bu sayede tüm routing ve static file serving düzgün çalışır
+export FLASK_APP=backend/app.py
 export FLASK_ENV=development
 
-python3 -m flask run --host=0.0.0.0 --port=5000 --debug
+python3 backend/app.py
