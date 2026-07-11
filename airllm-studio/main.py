@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-AirLLM Studio v1.2.0 - Performans Optimizasyonlu Sürüm
-Özellikler:
-- Katmanlı Yükleme (Layer-by-Layer) ile Düşük VRAM Kullanımı
-- Dinamik GPU Offloading ve Q4_K_M Desteği
-- NVMe I/O Optimizasyonu ve Düşük Gecikme
-- Otomatik Bağlam Penceresi Yönetimi (OOM Koruması)
-- Performans Modu (Arka plan süreçlerini kısıtla)
+AirLLM Studio v1.2.0 - Performans Optimizasyonlu Surum
+Ozellikler:
+- Katmanli Yukleme (Layer-by-Layer) ile Dusuk VRAM Kullanimi
+- Dinamik GPU Offloading ve Q4_K_M Destegi
+- NVMe I/O Optimizasyonu ve Dusuk Gecikme
+- Otomatik Baglam Penceresi Yonetimi (OOM Korumasi)
+- Performans Modu (Arka plan sureclerini kisitla)
 """
 
 import os
@@ -15,12 +15,20 @@ import sys
 import time
 import threading
 import socket
-import psutil
-import webbrowser
-from flask import Flask, request, jsonify, Response
-from flask_cors import CORS
+try:
+    import psutil
+except ImportError:
+    print("HATA: psutil kutuphanesi yuklu degil. Lutfen 'pip install psutil' calistirin.")
+    sys.exit(1)
+    
+try:
+    from flask import Flask, request, jsonify, Response
+    from flask_cors import CORS
+except ImportError:
+    print("HATA: Flask veya flask_cors kutuphanesi yuklu degil. Lutfen 'pip install flask flask-cors' calistirin.")
+    sys.exit(1)
 
-# --- Yapay Zeka Motoru Simülasyonu (Gerçek Entegrasyon İçin Hazır) ---
+# --- Yapay Zeka Motoru Simulasyonu (Gercek Entegrasyon Icin Hazir) ---
 class OptimizedLLMEngine:
     def __init__(self):
         self.model = None
@@ -30,7 +38,7 @@ class OptimizedLLMEngine:
         self.performance_mode = True
         
     def get_system_info(self):
-        """Donanım bilgilerini ve VRAM/RAM durumunu analiz et."""
+        """Donanim bilgilerini ve VRAM/RAM durumunu analiz et."""
         ram = psutil.virtual_memory()
         gpu_info = "Entegre GPU veya Tespit Edilemedi"
         try:
@@ -51,8 +59,8 @@ class OptimizedLLMEngine:
         }
 
     def load_model(self, model_name, quantization="Q4_K_M", gpu_layers=-1):
-        """Modeli katmanlı olarak yükler. v1.2.0: OOM korumalı."""
-        print(f"[Motor] Model yükleniyor: {model_name} ({quantization})...")
+        """Modeli katmanli olarak yukler. v1.2.0: OOM korumali."""
+        print(f"[Motor] Model yukleniyor: {model_name} ({quantization})...")
         self.total_layers = 32
         if gpu_layers == -1:
             available_vram = 6.0
@@ -60,25 +68,25 @@ class OptimizedLLMEngine:
         else:
             self.current_layer = min(gpu_layers, self.total_layers)
             
-        print(f"[Optimizasyon] {self.current_layer}/{self.total_layers} katman GPU'ya yüklendi.")
-        print(f"[Optimizasyon] Kalan katmanlar NVMe üzerinden stream edilecek.")
+        print(f"[Optimizasyon] {self.current_layer}/{self.total_layers} katman GPU'ya yuklendi.")
+        print(f"[Optimizasyon] Kalan katmanlar NVMe uzerinden stream edilecek.")
         time.sleep(1)
         self.is_loaded = True
         return True
 
     def generate_stream(self, prompt, max_tokens=256, context_window=4096):
-        """Akış yanıt üretici. v1.2.0: Düşük gecikmeli I/O."""
+        """Akis yanit uretici. v1.2.0: Dusuk gecikmeli I/O."""
         if not self.is_loaded:
-            yield "HATA: Model henüz yüklenmedi."
+            yield "HATA: Model henuz yuklenmedi."
             return
 
         if len(prompt) > context_window:
             prompt = prompt[-context_window:]
-            yield "[Sistem] Bağlam penceresi aşıldı, giriş kısaltıldı (OOM Koruması).\n\n"
+            yield "[Sistem] Baglam penceresi asildi, giris kisaltilmis (OOM Korumasi).\n\n"
 
-        words = ["AirLLM", "Studio", "v1.2.0", "yanıtı:", 
-                 "Katmanlı", "yükleme", "aktif.", "GPU", "offloading", "optimize.", 
-                 "Token", "hızı", "%25", "artırıldı.", "Keyifli", "kullanımlar!"]
+        words = ["AirLLM", "Studio", "v1.2.0", "yaniti:", 
+                 "Katmanli", "yukleme", "aktif.", "GPU", "offloading", "optimize.", 
+                 "Token", "hizi", "%25", "artirildi.", "Keyifli", "kullanimlar!"]
         
         for word in words:
             yield word + " "
@@ -290,13 +298,17 @@ def find_free_port():
 
 def open_browser(url):
     time.sleep(1.5)
-    webbrowser.open(url)
+    try:
+        import webbrowser
+        webbrowser.open(url)
+    except:
+        pass
 
 if __name__ == '__main__':
     print("========================================")
-    print("  AirLLM Studio v1.2.0 Başlatılıyor...")
+    print("  AirLLM Studio v1.2.0 Baslatiliyor...")
     print("  Optimizasyonlar: Aktif")
-    print("  Mod: Performans (Düşük Gecikme)")
+    print("  Mod: Performans (Dusuk Gecikme)")
     print("========================================")
     
     port = find_free_port()
@@ -307,4 +319,4 @@ if __name__ == '__main__':
     try:
         app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
     except KeyboardInterrupt:
-        print("\nKapatılıyor...")
+        print("\nKapatiliyor...")
