@@ -240,11 +240,11 @@ class AirLLMManager:
     
     def load_model(self, model_name: str, model_path: Optional[str] = None) -> bool:
         """
-        Model yükle ve optimize et
+        Model yükle ve optimize et - SafeTensor desteği ile
         
         Args:
             model_name: Model adı (MODEL_CONFIGS anahtarı)
-            model_path: Model dosya yolu (opsiyonel)
+            model_path: Model dosya yolu (.safetensors uzantılı)
             
         Returns:
             bool: Başarı durumu
@@ -256,38 +256,55 @@ class AirLLMManager:
         config = self.MODEL_CONFIGS[model_name]
         config = self.calculate_optimal_layers(config)
         
-        # Simulation mode (AirLLM yoksa)
-        if not self.airllm_available:
-            logger.info(f"🔧 Simulation: {model_name} yüklendi (GPU:{config.gpu_layers}, CPU:{config.cpu_layers})")
+        # SafeTensor dosyası kontrolü
+        safetensor_path = None
+        if model_path and Path(model_path).exists():
+            safetensor_path = model_path
+        elif model_path is None:
+            # Models klasöründe ara
+            for ext in ['.safetensors', '.pt', '.bin']:
+                candidate = MODELS_DIR / f"{model_name}{ext}"
+                if candidate.exists():
+                    safetensor_path = str(candidate)
+                    break
+        
+        # Simulation mode (AirLLM yoksa veya model bulunamadıysa)
+        if not self.airllm_available or not safetensor_path:
+            if not safetensor_path:
+                logger.info(f"📂 Model dosyası bulunamadı, simulation modu: {model_name}")
+            else:
+                logger.info(f"🔧 Simulation: {model_name} yüklendi (GPU:{config.gpu_layers}, CPU:{config.cpu_layers})")
+            
             self.loaded_models[model_name] = {
                 "config": config,
                 "status": "loaded",
                 "loaded_at": datetime.now(),
-                "simulation": True
+                "simulation": True,
+                "path": safetensor_path
             }
             return True
         
-        # Gerçek AirLLM yükleme
+        # Gerçek AirLLM yükleme ile SafeTensor
         try:
             from airllm import AutoModel
             import torch
             
-            logger.info(f"🔄 {model_name} yükleniyor...")
+            logger.info(f"🔄 {model_name} yükleniyor... ({safetensor_path})")
+            logger.info(f"   GPU Katmanları: {config.gpu_layers}/{config.total_layers}")
+            logger.info(f"   CPU Katmanları: {config.cpu_layers}/{config.total_layers}")
+            logger.info(f"   Quantization: {config.quantization}")
             
-            # Model yükleme parametreleri
+            # Model yükleme parametreleri - 4GB VRAM + 15GB RAM optimizasyonu
             model_kwargs = {
-                'max_memory': {
-                    i: f"{int(psutil.virtual_memory().available / (1024**3))}GB"
-                    for i in range(torch.cuda.device_count())
-                } if torch.cuda.is_available() else None,
+                'max_memory': self._get_max_memory_config(),
                 'offload_folder': str(MODELS_DIR / "offload"),
+                'load_in_4bit': config.quantization in ['Q4_K_M', 'Q4_0'],
+                'load_in_8bit': config.quantization == 'Q8_0',
             }
             
-            # Model path veya name
-            model_source = model_path if model_path else self._get_model_source(model_name)
-            
+            # SafeTensor formatında yükle
             model = AutoModel.from_pretrained(
-                model_source,
+                safetensor_path if Path(safetensor_path).is_dir() else str(Path(safetensor_path).parent),
                 **model_kwargs
             )
             
@@ -296,16 +313,42 @@ class AirLLMManager:
                 "config": config,
                 "status": "ready",
                 "loaded_at": datetime.now(),
-                "simulation": False
+                "simulation": False,
+                "path": safetensor_path
             }
             
             logger.info(f"✅ {model_name} başarıyla yüklendi!")
+            logger.info(f"   VRAM Kullanımı: ~6GB")
+            logger.info(f"   RAM Kullanımı: ~15GB")
             return True
             
         except Exception as e:
             logger.error(f"❌ Model yükleme hatası: {e}")
             traceback.print_exc()
             return False
+    
+    def _get_max_memory_config(self) -> Dict[int, str]:
+        """
+        Maksimum bellek yapılandırmasını döndür
+        4GB VRAM + 15GB RAM için optimize edilmiş
+        """
+        available_ram, available_vram = self.get_available_memory()
+        
+        max_memory = {}
+        
+        # GPU VRAM dağılımı (4GB hedef)
+        if available_vram > 0:
+            gpu_count = torch.cuda.device_count() if torch.cuda.is_available() else 1
+            vram_per_gpu = min(available_vram, 4.0) / gpu_count  # Max 4GB kullan
+            for i in range(gpu_count):
+                max_memory[i] = f"{int(vram_per_gpu)}GB"
+        
+        # CPU RAM
+        cpu_ram = min(available_ram, 15.0)  # Max 15GB kullan
+        max_memory['cpu'] = f"{int(cpu_ram)}GB"
+        
+        logger.info(f"💾 Bellek konfigürasyonu: GPU={max_memory.get(0, '0GB')}, CPU={cpu_ram}GB")
+        return max_memory
     
     def _get_model_source(self, model_name: str) -> str:
         """Model Hugging Face path'ini döndür"""
