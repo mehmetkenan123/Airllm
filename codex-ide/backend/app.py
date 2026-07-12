@@ -1090,7 +1090,7 @@ class CodexHTTPHandler(BaseHTTPRequestHandler):
     
     def handle_index_html(self):
         """Ana HTML sayfası"""
-        html = f'''<!DOCTYPE html>
+        html = '''<!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
