@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codex IDE v5.0 - AI Powered Development Environment</title>
+    <style>
+        :root {
+            --bg-deepest: #0a0a0f;
+            --bg-deep: #0f0f1a;
+            --bg-surface: #141428;
+            --bg-elevated: #1a1a35;
+            --text-primary: #e8e8f0;
+            --text-secondary: #a0a0c0;
+            --text-tertiary: #606080;
+            --accent-primary: #6c5ce7;
+            --accent-secondary: #a855f7;
+            --accent-ai: #00d4ff;
+            --accent-success: #00e676;
+            --accent-warning: #ffd600;
+            --accent-error: #ff1744;
+            --border-subtle: rgba(255,255,255,0.04);
+            --border-default: rgba(255,255,255,0.08);
+            --glass-bg: rgba(20,20,40,0.7);
+            --glass-border: rgba(255,255,255,0.06);
+            --shadow-md: 0 8px 32px rgba(0,0,0,0.6);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+            --font-sans: 'Inter', system-ui, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-deepest);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 48px 280px 1fr 400px;
+            grid-template-rows: 40px 1fr 28px;
+            height: 100vh;
+            grid-template-areas:
+                "titlebar titlebar titlebar titlebar"
+                "activity sidebar editor aipanel"
+                "status status status status";
+        }
+
+        /* Title Bar */
+        .titlebar {
+            grid-area: titlebar;
+            background: var(--bg-deep);
+            border-bottom: 1px solid var(--border-default);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            backdrop-filter: blur(20px);
+        }
+
+        .titlebar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .app-logo {
+            font-size: 20px;
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-ai));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .project-name {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .titlebar-center {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            padding: 4px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .titlebar-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .ai-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .ai-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Activity Bar */
+        .activity-bar {
+            grid-area: activity;
+            background: var(--bg-deep);
+            border-right: 1px solid var(--border-default);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 0;
+            gap: 8px;
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 20px;
+            color: var(--text-tertiary);
+        }
+
+        .activity-icon:hover {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+        }
+
+        .activity-icon.active {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            box-shadow: 0 0 20px rgba(108, 92, 231, 0.4);
+        }
+
+        .activity-icon.ai-chat {
+            color: var(--accent-ai);
+            text-shadow: 0 0 10px var(--accent-ai);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            grid-area: sidebar;
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border-default);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-default);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-tree {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+
+        .file-item {
+            padding: 6px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-secondary);
+            transition: all 0.15s;
+        }
+
+        .file-item:hover {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+        }
+
+        .file-item.active {
+            background: rgba(108, 92, 231, 0.15);
+            color: var(--accent-primary);
+            border-left: 2px solid var(--accent-primary);
+        }
+
+        .file-icon {
+            font-size: 14px;
+        }
+
+        /* Editor Area */
+        .editor-area {
+            grid-area: editor;
+            background: var(--bg-deepest);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .editor-tabs {
+            display: flex;
+            background: var(--bg-deep);
+            border-bottom: 1px solid var(--border-default);
+            height: 40px;
+            overflow-x: auto;
+        }
+
+        .editor-tab {
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border-default);
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-secondary);
+            min-width: 120px;
+            max-width: 200px;
+            transition: all 0.15s;
+        }
+
+        .editor-tab:hover {
+            background: var(--bg-elevated);
+        }
+
+        .editor-tab.active {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            border-top: 2px solid var(--accent-primary);
+        }
+
+        .tab-close {
+            margin-left: auto;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .editor-tab:hover .tab-close {
+            opacity: 1;
+        }
+
+        .editor-content {
+            flex: 1;
+            padding: 16px;
+            font-family: var(--font-mono);
+            font-size: 14px;
+            line-height: 1.6;
+            overflow: auto;
+            color: var(--text-primary);
+        }
+
+        .code-line {
+            display: flex;
+            gap: 16px;
+        }
+
+        .line-number {
+            color: var(--text-tertiary);
+            user-select: none;
+            width: 40px;
+            text-align: right;
+        }
+
+        .line-content {
+            flex: 1;
+        }
+
+        /* AI Panel */
+        .ai-panel {
+            grid-area: aipanel;
+            background: var(--bg-surface);
+            border-left: 1px solid var(--border-default);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .ai-panel-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-default);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ai-panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .model-selector {
+            background: var(--bg-deep);
+            border: 1px solid var(--border-default);
+            color: var(--text-primary);
+            padding: 6px 10px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+            max-width: 90%;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--bg-elevated);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .message.ai .message-avatar {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-ai));
+        }
+
+        .message-content {
+            background: var(--bg-elevated);
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--text-primary);
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            border-radius: var(--radius-md) var(--radius-md) 0 var(--radius-md);
+        }
+
+        .message.ai .message-content {
+            border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 0;
+        }
+
+        .code-block {
+            background: var(--bg-deepest);
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            margin: 8px 0;
+            overflow-x: auto;
+            border: 1px solid var(--border-default);
+        }
+
+        .chat-input-container {
+            padding: 16px;
+            border-top: 1px solid var(--border-default);
+            background: var(--bg-deep);
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-default);
+            color: var(--text-primary);
+            padding: 12px;
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            font-family: var(--font-sans);
+            resize: none;
+            max-height: 150px;
+            min-height: 50px;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.2);
+        }
+
+        .send-btn {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: transform 0.15s;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .token-counter {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            margin-top: 8px;
+            text-align: right;
+        }
+
+        /* Status Bar */
+        .statusbar {
+            grid-area: status;
+            background: var(--bg-deepest);
+            border-top: 1px solid var(--border-default);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .statusbar-left,
+        .statusbar-right {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: color 0.15s;
+        }
+
+        .status-item:hover {
+            color: var(--text-primary);
+        }
+
+        .git-branch {
+            color: var(--accent-success);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-deep);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-default);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-tertiary);
+        }
+
+        /* Welcome Screen */
+        .welcome-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .welcome-logo {
+            font-size: 64px;
+            margin-bottom: 24px;
+            animation: glow 3s infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { filter: drop-shadow(0 0 20px var(--accent-primary)); }
+            50% { filter: drop-shadow(0 0 40px var(--accent-ai)); }
+        }
+
+        .welcome-title {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-ai));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .welcome-subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            font-size: 16px;
+        }
+
+        .welcome-cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            max-width: 600px;
+        }
+
+        .welcome-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            padding: 24px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.3s;
+            backdrop-filter: blur(20px);
+        }
+
+        .welcome-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-primary);
+            box-shadow: var(--shadow-md);
+        }
+
+        .welcome-card-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .welcome-card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .welcome-card-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Loading Animation */
+        .thinking-dots {
+            display: flex;
+            gap: 4px;
+            padding: 8px 0;
+        }
+
+        .thinking-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-ai);
+            animation: thinking 1.4s infinite;
+        }
+
+        .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+        .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes thinking {
+            0%, 100% { transform: scale(0.6); opacity: 0.5; }
+            50% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Model Info Panel */
+        .model-info {
+            background: var(--bg-deep);
+            padding: 12px 16px;
+            border-top: 1px solid var(--border-default);
+            font-size: 11px;
+            color: var(--text-tertiary);
+        }
+
+        .model-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--accent-ai);
+        }
+
+        .stat-label {
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Title Bar -->
+        <div class="titlebar">
+            <div class="titlebar-left">
+                <div class="app-logo">⚡ Codex IDE</div>
+                <div class="project-name">/workspace/codex-ide</div>
+            </div>
+            <div class="titlebar-center">
+                <button class="action-btn" onclick="runProject()">▶ Run</button>
+                <button class="action-btn" onclick="debugProject()">🐛 Debug</button>
+                <button class="action-btn" onclick="buildProject()">🔨 Build</button>
+                <button class="action-btn" onclick="formatCode()">✨ Format</button>
+            </div>
+            <div class="titlebar-right">
+                <div class="ai-status">
+                    <div class="ai-dot"></div>
+                    <span id="aiModelName">Qwen-72B</span>
+                    <span id="tokenSpeed">45 tok/s</span>
+                </div>
+                <div style="font-size: 12px; color: var(--text-secondary);" id="currentTime"></div>
+            </div>
+        </div>
+
+        <!-- Activity Bar -->
+        <div class="activity-bar">
+            <div class="activity-icon active" title="Explorer">📁</div>
+            <div class="activity-icon" title="Search">🔍</div>
+            <div class="activity-icon" title="Source Control">🔗</div>
+            <div class="activity-icon" title="Debug">🐛</div>
+            <div class="activity-icon" title="Extensions">🧩</div>
+            <div class="activity-icon ai-chat" title="AI Chat">🤖</div>
+            <div style="flex: 1;"></div>
+            <div class="activity-icon" title="Settings">⚙️</div>
+            <div class="activity-icon" title="Account">👤</div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <span>EXPLORER</span>
+                <span style="cursor: pointer;">⋯</span>
+            </div>
+            <div class="file-tree" id="fileTree">
+                <div class="file-item active">
+                    <span class="file-icon">🐍</span>
+                    <span>app.py</span>
+                </div>
+                <div class="file-item">
+                    <span class="file-icon">🌐</span>
+                    <span>index.html</span>
+                </div>
+                <div class="file-item">
+                    <span class="file-icon">📦</span>
+                    <span>requirements.txt</span>
+                </div>
+                <div class="file-item">
+                    <span class="file-icon">⚙️</span>
+                    <span>config.json</span>
+                </div>
+                <div class="file-item">
+                    <span class="file-icon">📝</span>
+                    <span>README.md</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Editor Area -->
+        <div class="editor-area">
+            <div class="editor-tabs">
+                <div class="editor-tab active">
+                    <span class="file-icon">🐍</span>
+                    <span>app.py</span>
+                    <span class="tab-close">×</span>
+                </div>
+                <div class="editor-tab">
+                    <span class="file-icon">🌐</span>
+                    <span>index.html</span>
+                    <span class="tab-close">×</span>
+                </div>
+            </div>
+            <div class="editor-content" id="editorContent">
+                <div class="code-line">
+                    <span class="line-number">1</span>
+                    <span class="line-content"><span style="color: #c678dd;">from</span> flask <span style="color: #c678dd;">import</span> Flask</span>
+                </div>
+                <div class="code-line">
+                    <span class="line-number">2</span>
+                    <span class="line-content"></span>
+                </div>
+                <div class="code-line">
+                    <span class="line-number">3</span>
+                    <span class="line-content"><span style="color: #61afef;">app</span> = Flask(__name__)</span>
+                </div>
+                <div class="code-line">
+                    <span class="line-number">4</span>
+                    <span class="line-content"></span>
+                </div>
+                <div class="code-line">
+                    <span class="line-number">5</span>
+                    <span class="line-content"><span style="color: #c678dd;">@app.route</span>(<span style="color: #98c379;">'/api/models'</span>)</span>
+                </div>
+                <div class="code-line">
+                    <span class="line-number">6</span>
+                    <span class="line-content"><span style="color: #c678dd;">def</span> <span style="color: #61afef;">get_models</span>():</span>
+                </div>
+                <div class="code-line">
+                    <span class="line-number">7</span>
+                    <span class="line-content">    <span style="color: #c678dd;">return</span> {<span style="color: #98c379;">"models"</span>: []}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Panel -->
+        <div class="ai-panel">
+            <div class="ai-panel-header">
+                <div class="ai-panel-title">
+                    🤖 AI Asistan
+                </div>
+                <select class="model-selector" id="modelSelector" onchange="changeModel()">
+                    <option value="qwen-72b">Qwen-72B (4-bit)</option>
+                    <option value="llama-70b">Llama-70B (4-bit)</option>
+                    <option value="codellama-34b">CodeLlama-34B</option>
+                    <option value="deepseek-7b">DeepSeek-7B</option>
+                    <option value="mistral-7b">Mistral-7B</option>
+                </select>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="message ai">
+                    <div class="message-avatar">🤖</div>
+                    <div class="message-content">
+                        Merhaba! Ben Codex AI asistanınızım. 
+                        <br><br>
+                        Size nasıl yardımcı olabilirim?
+                        <ul style="margin: 8px 0 0 16px;">
+                            <li>Kod analizi yapabilirim</li>
+                            <li>Refactoring önerileri sunabilirim</li>
+                            <li>Güvenlik taraması yapabilirim</li>
+                            <li>Test kodu yazabilirim</li>
+                        </ul>
+                        <br>
+                        <strong>Model:</strong> Qwen-72B (Katman offloading aktif)<br>
+                        <strong>VRAM:</strong> 6GB / 15GB RAM kullanımda
+                    </div>
+                </div>
+            </div>
+
+            <div class="model-info">
+                <div class="model-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="vramUsage">6.0 GB</div>
+                        <div class="stat-label">VRAM</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="ramUsage">15.2 GB</div>
+                        <div class="stat-label">RAM</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="tokenSpeedStat">45</div>
+                        <div class="stat-label">Tok/s</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-container">
+                <div class="chat-input-wrapper">
+                    <textarea 
+                        class="chat-input" 
+                        id="chatInput" 
+                        placeholder="Codex'e sor... (Shift+Enter yeni satır)"
+                        rows="1"
+                        onkeydown="handleKeydown(event)"
+                        oninput="autoResize(this)"
+                    ></textarea>
+                    <button class="send-btn" onclick="sendMessage()">➤</button>
+                </div>
+                <div class="token-counter">
+                    <span id="tokenCount">0</span> / 8192 tokens
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="statusbar">
+            <div class="statusbar-left">
+                <div class="status-item git-branch">
+                    <span>🔀</span>
+                    <span>main</span>
+                </div>
+                <div class="status-item">
+                    <span>⬆️ 3 ⬇️ 2</span>
+                </div>
+                <div class="status-item">
+                    <span>❌ 0</span>
+                    <span>⚠️ 3</span>
+                </div>
+                <div class="status-item">UTF-8</div>
+                <div class="status-item">LF</div>
+                <div class="status-item">Python</div>
+            </div>
+            <div class="statusbar-right">
+                <div class="status-item">
+                    <span>Ln 42, Col 17</span>
+                </div>
+                <div class="status-item">
+                    <span>Spaces: 2</span>
+                </div>
+                <div class="status-item">
+                    <span>🧠 <span id="statusTokenCount">1.2K</span>/8K</span>
+                </div>
+                <div class="status-item">
+                    <span>📊 342MB</span>
+                </div>
+                <div class="status-item">
+                    <span>🌡️ 45°C</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentModel = 'qwen-72b';
+        let messageHistory = [];
+        let isThinking = false;
+
+        // Update time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString('tr-TR');
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // Auto-resize textarea
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
+            document.getElementById('tokenCount').textContent = textarea.value.length;
+        }
+
+        // Handle keyboard shortcuts
+        function handleKeydown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // Send message to AI
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message || isThinking) return;
+
+            // Add user message
+            addMessage('user', message);
+            input.value = '';
+            autoResize(input);
+
+            // Show thinking indicator
+            showThinking();
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: currentModel,
+                        message: message,
+                        context: getCodeContext()
+                    })
+                });
+
+                const data = await response.json();
+                hideThinking();
+                
+                if (data.response) {
+                    addMessage('ai', data.response);
+                } else if (data.error) {
+                    addMessage('ai', `❌ Hata: ${data.error}`);
+                }
+            } catch (error) {
+                hideThinking();
+                addMessage('ai', `❌ Bağlantı hatası: ${error.message}`);
+            }
+
+            updateStats();
+        }
+
+        // Add message to chat
+        function addMessage(role, content) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            
+            const avatar = role === 'user' ? '👤' : '🤖';
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${avatar}</div>
+                <div class="message-content">${formatMessage(content)}</div>
+            `;
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            messageHistory.push({ role, content });
+        }
+
+        // Format message (code blocks, etc.)
+        function formatMessage(content) {
+            // Format code blocks
+            content = content.replace(/```(\w*)\n([\s\S]*?)```/g, '<div class="code-block">$2</div>');
+            // Format inline code
+            content = content.replace(/`([^`]+)`/g, '<code style="background: rgba(108,92,231,0.2); padding: 2px 6px; border-radius: 4px;">$1</code>');
+            // Line breaks
+            content = content.replace(/\n/g, '<br>');
+            return content;
+        }
+
+        // Show thinking indicator
+        function showThinking() {
+            if (isThinking) return;
+            isThinking = true;
+            
+            const messagesDiv = document.getElementById('chatMessages');
+            const thinkingDiv = document.createElement('div');
+            thinkingDiv.id = 'thinkingIndicator';
+            thinkingDiv.className = 'message ai';
+            thinkingDiv.innerHTML = `
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    <div class="thinking-dots">
+                        <div class="thinking-dot"></div>
+                        <div class="thinking-dot"></div>
+                        <div class="thinking-dot"></div>
+                    </div>
+                </div>
+            `;
+            messagesDiv.appendChild(thinkingDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Hide thinking indicator
+        function hideThinking() {
+            const thinking = document.getElementById('thinkingIndicator');
+            if (thinking) thinking.remove();
+            isThinking = false;
+        }
+
+        // Get code context from editor
+        function getCodeContext() {
+            return {
+                file: 'app.py',
+                language: 'python',
+                selection: ''
+            };
+        }
+
+        // Change model
+        function changeModel() {
+            const selector = document.getElementById('modelSelector');
+            currentModel = selector.value;
+            const modelName = selector.options[selector.selectedIndex].text.split('(')[0].trim();
+            document.getElementById('aiModelName').textContent = modelName;
+            
+            addMessage('ai', `✅ Model değiştirildi: <strong>${modelName}</strong><br>Katman offloading otomatik yapılandırılıyor...`);
+            updateStats();
+        }
+
+        // Update statistics
+        function updateStats() {
+            // Simulate dynamic stats
+            const vram = (6 + Math.random() * 0.5).toFixed(1);
+            const ram = (15 + Math.random() * 0.3).toFixed(1);
+            const speed = Math.floor(40 + Math.random() * 10);
+            
+            document.getElementById('vramUsage').textContent = `${vram} GB`;
+            document.getElementById('ramUsage').textContent = `${ram} GB`;
+            document.getElementById('tokenSpeedStat').textContent = speed;
+            document.getElementById('tokenSpeed').textContent = `${speed} tok/s`;
+            document.getElementById('statusTokenCount').textContent = `${(1 + Math.random()).toFixed(1)}K`;
+        }
+        
+        setInterval(updateStats, 5000);
+
+        // Action buttons
+        function runProject() {
+            addMessage('ai', '🚀 Proje çalıştırılıyor...\n\n```bash\npython backend/app.py\n```\n\nSunucu http://localhost:8080 adresinde başlatıldı.');
+        }
+
+        function debugProject() {
+            addMessage('ai', '🐛 Debug modu başlatılıyor...\n\nBreakpoint\'ler ayarlanıyor.\nDebugger hazır.');
+        }
+
+        function buildProject() {
+            addMessage('ai', '🔨 Build işlemi başlatıldı...\n\n✅ Derleme başarılı!\n⏱️ Süre: 2.3s');
+        }
+
+        function formatCode() {
+            addMessage('ai', '✨ Kod formatlanıyor...\n\n✅ Formatlama tamamlandı!\n📊 15 dosya düzenlendi.');
+        }
+
+        // File tree interaction
+        document.querySelectorAll('.file-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.file-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+            });
+        });
+
+        // Editor tab interaction
+        document.querySelectorAll('.editor-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.editor-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+            });
+        });
+
+        // Initialize
+        console.log('Codex IDE v5.0 initialized');
+        console.log('AirLLM Katman Offloading: Aktif');
+        console.log('Model: Qwen-72B (4-bit quantization)');
+        console.log('VRAM: 6GB, RAM: 15GB kullanımda');
+    </script>
+</body>
+</html>
